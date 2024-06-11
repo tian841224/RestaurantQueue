@@ -1,6 +1,6 @@
-﻿using RestaurantQueue.Enum;
+﻿using FrontStage.Enum;
 
-namespace RestaurantQueue.Dto
+namespace FrontStage.Dto
 {
     /// <summary>
     /// 現場取號DTO

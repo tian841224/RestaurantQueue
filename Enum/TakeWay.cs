@@ -1,4 +1,4 @@
-﻿namespace RestaurantQueue.Enum
+﻿namespace FrontStage.Enum
 {
     /// <summary>
     /// 取號方式

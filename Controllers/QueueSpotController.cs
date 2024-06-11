@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using RestaurantQueue.Dto;
-using RestaurantQueue.Service;
+﻿using FrontStage.Dto;
+using FrontStage.Service;
+using Microsoft.AspNetCore.Mvc;
 
-namespace RestaurantQueue.Controllers
+namespace FrontStage.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]
@@ -10,7 +10,7 @@ namespace RestaurantQueue.Controllers
     {
         private QueueService _queueService;
 
-        public QueueSpotController(RedisService redisService, QueueService queueService) 
+        public QueueSpotController(RedisService redisService, QueueService queueService)
         {
             _queueService = queueService;
         }
@@ -20,10 +20,21 @@ namespace RestaurantQueue.Controllers
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        [HttpGet]
-        public int SpotTakeNumber(SpotTackNumberDto dto)
+        [HttpPost]
+        public async Task<SpotTakeNumberResponseDto> SpotTakeNumber(SpotTackNumberDto dto)
         {
-            return _queueService.SpotTakeNumber(dto);
+            return await _queueService.SpotTakeNumber(dto);
+        }
+
+        /// <summary>
+        /// 入座
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task ConsumeNumber(ConsumeNumberDto dto)
+        {
+
         }
     }
 }

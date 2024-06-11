@@ -1,4 +1,4 @@
-﻿namespace RestaurantQueue.Dto
+﻿namespace FrontStage.Dto
 {
     /// <summary>
     /// 顧客資訊
