@@ -27,6 +27,17 @@ namespace FrontStage.Controllers
         }
 
         /// <summary>
+        /// 取得目前排隊號碼
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<int> GetOrder(GetOrderDto dto)
+        {
+            return await _queueService.GetOrder(dto);
+        }
+
+        /// <summary>
         /// 入座
         /// </summary>
         /// <param name="dto"></param>
