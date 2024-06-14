@@ -2,20 +2,11 @@
 
 namespace FrontStage.Dto
 {
-    /// <summary>
-    /// 顧客資訊
-    /// </summary>
-    public class CustomerDto
+    public class AddDailyReserveDto
     {
-        /// <summary>
-        /// 號碼
-        /// </summary>
-        public int Id { get; set; }
-
-        /// <summary>
         /// 取號號碼
         /// </summary>
-        public int number { get; set; }
+        public int? number { get; set; }
 
         /// <summary>
         /// 取號時間
@@ -36,5 +27,10 @@ namespace FrontStage.Dto
         /// 人數
         /// </summary>
         public int people { get; set; }
+
+        /// <summary>
+        /// 預約狀態
+        /// </summary>
+        public FlagEnum flag { get; set; }
     }
 }

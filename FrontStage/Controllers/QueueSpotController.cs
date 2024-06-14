@@ -27,14 +27,47 @@ namespace FrontStage.Controllers
         }
 
         /// <summary>
+        /// 網路取號
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<NetTakeNumberResponseDto> NetTakeNumber(NetTakeNumberDto dto)
+        {
+            return await _queueService.NetTakeNumber(dto);
+        }
+
+        /// <summary>
         /// 取得目前排隊號碼
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost]
-        public async Task<int> GetOrder(GetOrderDto dto)
+        public async Task<int> GetCustomerOrder(GetCustomerOrder dto)
         {
-            return await _queueService.GetOrder(dto);
+            return await _queueService.GetCustomerOrder(dto);
+        }
+
+        /// <summary>
+        /// 取得各桌位需等待人數
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<WaitCountResponseDto> GetWaitCount()
+        {
+            return await _queueService.GetWaitCount();
+        }
+
+        /// <summary>
+        /// 取得顧客需等待人數
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<int> GetWaitCount(GetWaitCountDto dto)
+        {
+            return await _queueService.GetWaitCount(dto);
         }
 
         /// <summary>
@@ -43,9 +76,20 @@ namespace FrontStage.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost]
-        public async Task ConsumeNumber(ConsumeNumberDto dto)
+        public async Task<QueueList> ConsumeNumber(ConsumeNumberDto dto)
         {
-
+            return await _queueService.ConsumeNumber(dto);
+        }
+        
+        /// <summary>
+        /// 取消預約
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task CancelReserve(CancelReserveDto dto)
+        {
+           await _queueService.CancelReserve(dto);
         }
     }
 }

@@ -2,21 +2,8 @@
 
 namespace FrontStage.Dto
 {
-    /// <summary>
-    /// 顧客資訊
-    /// </summary>
-    public class CustomerDto
+    public class NetTakeNumberDto
     {
-        /// <summary>
-        /// 號碼
-        /// </summary>
-        public int Id { get; set; }
-
-        /// <summary>
-        /// 取號號碼
-        /// </summary>
-        public int number { get; set; }
-
         /// <summary>
         /// 取號時間
         /// </summary>

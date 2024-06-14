@@ -1,7 +1,7 @@
 ﻿using FrontStage.Dto;
 using FrontStage.Enum;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using StackExchange.Redis;
+using System;
 using System.Text.Json;
 
 namespace FrontStage.Service
@@ -14,10 +14,12 @@ namespace FrontStage.Service
         private static IDatabase _redisDb;
         private readonly string _lockKey = "queueLockKey";
         private readonly TimeSpan _expiry = new TimeSpan(0, 0, 30);//設定失效時間為30秒
-        private readonly string redisKey = "queueList";
+        private readonly string date = DateTime.UtcNow.Month.ToString() + DateTime.UtcNow.Day.ToString();
+        private readonly string redisKey ;
 
         public RedisService(IConfiguration configuration)
         {
+            redisKey = $"queueList_{date}";
             _configuration = configuration;
             _connection = new Lazy<ConnectionMultiplexer>(() =>
             {
@@ -83,6 +85,25 @@ namespace FrontStage.Service
         }
 
         /// <summary>
+        /// 取得客人資訊
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        public async Task<CustomerDto> GetCustomer(GetCustomerDto dto)
+        {
+            var key = $"{dto.tableSize}_{redisKey}";
+
+            if (await _redisDb.KeyExistsAsync(key))
+            {
+                var element = (await _redisDb.SortedSetRangeByScoreAsync($"{key}", dto.number, dto.number)).FirstOrDefault();
+                var customer = JsonSerializer.Deserialize<CustomerDto>(element);
+                return customer;
+            }
+
+            return new CustomerDto { };
+        }
+
+        /// <summary>
         /// 取得下一位入座客人
         /// </summary>
         /// <param name="dto"></param>
@@ -113,16 +134,10 @@ namespace FrontStage.Service
         {
             var key = $"{dto.tableSize}_{redisKey}";
 
-            if (await _redisDb.KeyExistsAsync(redisKey))
+            if (await _redisDb.KeyExistsAsync(key))
             {
-                var firstEntry = await _redisDb.SortedSetRangeByRankAsync(key, 0, 0);
-
-                if (firstEntry.Length > 0)
-                {
-                    var entry = firstEntry[0];
-                    // 移除 SortedSet 中的第一個元素
-                    await _redisDb.SortedSetRemoveAsync(key, entry);
-                }
+                var element = (await _redisDb.SortedSetRangeByScoreAsync($"{key}", dto.number, dto.number)).FirstOrDefault();
+                await _redisDb.SortedSetRemoveAsync($"key", element);
             }
         }
         /// <summary>
@@ -165,9 +180,41 @@ namespace FrontStage.Service
         }
 
         /// <summary>
-        /// 取得當前順序
+        /// 取得各桌位需等待人數
         /// </summary>
-        public async Task<int> GetOrder(GetOrderDto dto)
+        public async Task<WaitCountResponseDto> GetWaitCount()
+        {
+            var result = new WaitCountResponseDto();
+            // 取得所有 TableSizeEnum 的值
+            Array enumValues = System.Enum.GetValues(typeof(TableSizeEnum));
+
+            // 列出所有的值
+            foreach (TableSizeEnum value in enumValues)
+            {
+                var number = (int)(await _redisDb.SortedSetRangeByRankWithScoresAsync($"{value.ToString()}_{redisKey}", 0, 0))[0].Score;
+                switch (value)
+                {
+                    case TableSizeEnum.Big:
+                        result.Big = number;
+                        break;
+
+                    case TableSizeEnum.Medium:
+                        result.Medium = number;
+                        break;
+
+                    case TableSizeEnum.Small:
+                        result.Small = number;
+                        break;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 取得顧客需等待人數
+        /// </summary>
+        public async Task<int> GetWaitCount(GetWaitCountDto dto)
         {
             var key = $"{dto.tableSize}_{redisKey}";
             var score = 0;
