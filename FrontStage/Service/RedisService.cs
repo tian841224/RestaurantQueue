@@ -1,7 +1,6 @@
 ﻿using FrontStage.Dto;
 using FrontStage.Enum;
 using StackExchange.Redis;
-using System;
 using System.Text.Json;
 
 namespace FrontStage.Service
@@ -10,39 +9,22 @@ namespace FrontStage.Service
     {
 
         private readonly IConfiguration _configuration;
-        private static Lazy<ConnectionMultiplexer> _connection;
-        private static IDatabase _redisDb;
+        private readonly ConnectionMultiplexer _connection;
+        private readonly Lazy<IDatabase> _redisDb;
         private readonly string _lockKey = "queueLockKey";
         private readonly TimeSpan _expiry = new TimeSpan(0, 0, 30);//設定失效時間為30秒
-        private readonly string date = DateTime.UtcNow.Month.ToString() + DateTime.UtcNow.Day.ToString();
-        private readonly string redisKey ;
+        private readonly string redisKey;
+        public IDatabase redisDb => _redisDb.Value;
 
         public RedisService(IConfiguration configuration)
         {
-            redisKey = $"queueList_{date}";
+            redisKey = $"queueList_{DateTime.Now.ToString("MMdd")}";
             _configuration = configuration;
-            _connection = new Lazy<ConnectionMultiplexer>(() =>
-            {
-                return ConnectionMultiplexer.Connect(_configuration.GetConnectionString("Redis"));
-            });
+            _connection = ConnectionMultiplexer.Connect(_configuration.GetConnectionString("Redis"));
+            _redisDb = new Lazy<IDatabase>(() => _connection.GetDatabase());
         }
 
-        public static ConnectionMultiplexer Connection
-        {
-            get
-            {
-                return _connection.Value;
-            }
-        }
 
-        /// <summary>
-        /// 選擇連結DB
-        /// </summary>
-        /// <param name="db"></param>
-        public void GetDatabase(int db = -1)
-        {
-            _redisDb = Connection.GetDatabase(db);
-        }
 
         /// <summary>
         /// Redis上鎖
@@ -50,7 +32,7 @@ namespace FrontStage.Service
         /// <returns></returns>
         public async Task<bool> AcquireLockAsync()
         {
-            return await _redisDb.StringSetAsync(_lockKey, redisKey, _expiry, When.NotExists);
+            return await redisDb.StringSetAsync(_lockKey, redisKey, _expiry, When.NotExists);
         }
 
         /// <summary>
@@ -59,7 +41,7 @@ namespace FrontStage.Service
         /// <returns></returns>
         public async Task ReleaseLockAsync()
         {
-            await _redisDb.KeyDeleteAsync(_lockKey);
+            await redisDb.KeyDeleteAsync(_lockKey);
         }
 
         /// <summary>
@@ -67,14 +49,20 @@ namespace FrontStage.Service
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        public async Task<int> GetLastNumber()
+        public async Task<int> GetLastNumber(GetLastNumberDto dto)
         {
+            var tableSize = dto.people >= 5 ? TableSizeEnum.Big :
+                dto.people >= 3 && dto.people < 5 ? TableSizeEnum.Medium :
+                TableSizeEnum.Small;
+
+            var key = $"{redisKey}_{tableSize}";
+
             int number = 1;
 
-            if (await _redisDb.KeyExistsAsync(redisKey))
+            if (await redisDb.KeyExistsAsync(key))
             {
                 // 取得最後一筆號碼
-                var entries = await _redisDb.SortedSetRangeByRankWithScoresAsync(redisKey, -1, -1, Order.Descending);
+                var entries = await redisDb.SortedSetRangeByRankWithScoresAsync(key, -1, -1, Order.Ascending);
                 if (entries.Length > 0)
                 {
                     var entry = entries[0];
@@ -91,11 +79,11 @@ namespace FrontStage.Service
         /// <returns></returns>
         public async Task<CustomerDto> GetCustomer(GetCustomerDto dto)
         {
-            var key = $"{dto.tableSize}_{redisKey}";
+            var key = $"{redisKey}_{dto.tableSize}";
 
-            if (await _redisDb.KeyExistsAsync(key))
+            if (await redisDb.KeyExistsAsync(key))
             {
-                var element = (await _redisDb.SortedSetRangeByScoreAsync($"{key}", dto.number, dto.number)).FirstOrDefault();
+                var element = (await redisDb.SortedSetRangeByScoreAsync($"{key}", dto.number, dto.number)).FirstOrDefault();
                 var customer = JsonSerializer.Deserialize<CustomerDto>(element);
                 return customer;
             }
@@ -110,15 +98,16 @@ namespace FrontStage.Service
         /// <returns></returns>
         public async Task<QueueList> GetAndRemoveNextNumber(GetNextNumberDto dto)
         {
-            var key = $"{dto.tableSize}_{redisKey}";
+            var key = $"{redisKey}_{dto.tableSize}";
+
             //取第一筆
-            var entry = await _redisDb.SortedSetRangeByRankAsync(key, 0, 0);
+            var entry = await redisDb.SortedSetRangeByRankAsync(key, 0, 0);
             //判斷是否有值
             if (entry.Length > 0)
             {
                 var result = JsonSerializer.Deserialize<QueueList>(entry[0]);
                 // 移除 SortedSet 中的第一個元素
-                await _redisDb.SortedSetRemoveAsync(key, entry);
+                await redisDb.SortedSetRemoveAsync(key, entry);
                 return result;
             }
 
@@ -132,12 +121,12 @@ namespace FrontStage.Service
         /// <returns></returns>
         public async Task RemoveNumber(RemoveNumberDto dto)
         {
-            var key = $"{dto.tableSize}_{redisKey}";
+            var key = $"{redisKey}_{dto.tableSize}";
 
-            if (await _redisDb.KeyExistsAsync(key))
+            if (await redisDb.KeyExistsAsync(key))
             {
-                var element = (await _redisDb.SortedSetRangeByScoreAsync($"{key}", dto.number, dto.number)).FirstOrDefault();
-                await _redisDb.SortedSetRemoveAsync($"key", element);
+                var element = (await redisDb.SortedSetRangeByScoreAsync($"{key}", dto.number, dto.number)).FirstOrDefault();
+                await redisDb.SortedSetRemoveAsync($"key", element);
             }
         }
         /// <summary>
@@ -159,10 +148,10 @@ namespace FrontStage.Service
                 takeWay = dto.takeWay,
                 phone = dto.phone,
                 people = dto.people,
-                tableSize = tableSize,
+                //tableSize = tableSize,
             });
 
-            await _redisDb.SortedSetAddAsync($"{tableSize}_{redisKey}", customerValue, (int)dto.number);
+            await redisDb.SortedSetAddAsync($"{redisKey}_{tableSize}", customerValue, (int)dto.number);
         }
 
         /// <summary>
@@ -170,13 +159,9 @@ namespace FrontStage.Service
         /// </summary>
         public async Task<int> GetCustomerOrder(GetCustomerOrder dto)
         {
-            var key = $"{dto.tableSize}_{redisKey}";
+            var key = $"{redisKey}_{dto.tableSize}";
 
-            var tableSize = dto.people >= 5 ? TableSizeEnum.Big :
-                dto.people >= 3 && dto.people < 5 ? TableSizeEnum.Medium :
-                TableSizeEnum.Small;
-
-            return (await _redisDb.SortedSetRangeByScoreAsync(key, 0, dto.number)).Count();
+            return (await redisDb.SortedSetRangeByScoreAsync(key, double.NegativeInfinity, dto.number)).Count();
         }
 
         /// <summary>
@@ -191,7 +176,7 @@ namespace FrontStage.Service
             // 列出所有的值
             foreach (TableSizeEnum value in enumValues)
             {
-                var number = (int)(await _redisDb.SortedSetRangeByRankWithScoresAsync($"{value.ToString()}_{redisKey}", 0, 0))[0].Score;
+                var number = (await redisDb.SortedSetRangeByRankWithScoresAsync($"{redisKey}_{value.ToString()}")).Count();
                 switch (value)
                 {
                     case TableSizeEnum.Big:
@@ -216,16 +201,42 @@ namespace FrontStage.Service
         /// </summary>
         public async Task<int> GetWaitCount(GetWaitCountDto dto)
         {
-            var key = $"{dto.tableSize}_{redisKey}";
-            var score = 0;
-            var smallestEntryWithScore = await _redisDb.SortedSetRangeByRankWithScoresAsync(key, 0, 0);
+            var customer = await GetCustomerByPhone(dto.phone);
 
-            if (smallestEntryWithScore.Length > 0)
+            var number = await GetCustomerOrder(new GetCustomerOrder
             {
-                score = (int)smallestEntryWithScore[0].Score;
+                number = customer.number,
+                tableSize = customer.people >= 5 ? TableSizeEnum.Big :
+                            customer.people >= 3 && customer.people < 5 ? TableSizeEnum.Medium :
+                            TableSizeEnum.Small,
+            });
+
+
+            return number - 1;
+        }
+
+        public async Task<QueueList> GetCustomerByPhone(int phone)
+        {
+            var customer = new QueueList();
+            // 取得所有 TableSizeEnum 的值
+            Array enumValues = System.Enum.GetValues(typeof(TableSizeEnum));
+            List<SortedSetEntry[]> list = new List<SortedSetEntry[]>();
+
+            // 列出所有的值
+            foreach (TableSizeEnum value in enumValues)
+            {
+                list.Add(await redisDb.SortedSetRangeByRankWithScoresAsync($"{redisKey}_{value.ToString()}"));
             }
 
-            return score;
+            var sortedSetEntry = list.SelectMany(entries => entries)
+                                      .Where(entry => entry.Element.ToString().Contains($"{phone}"))
+                                      .FirstOrDefault();
+            if (sortedSetEntry.Element.HasValue)
+            {
+                customer = JsonSerializer.Deserialize<QueueList>(sortedSetEntry.Element);
+            }
+
+            return customer;
         }
     }
 }

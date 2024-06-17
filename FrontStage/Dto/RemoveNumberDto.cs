@@ -13,10 +13,5 @@ namespace FrontStage.Dto
         /// 取號號碼
         /// </summary>
         public int number { get; set; }
-
-        /// <summary>
-        /// 電話
-        /// </summary>
-        public int phone { get; set; }
     }
 }

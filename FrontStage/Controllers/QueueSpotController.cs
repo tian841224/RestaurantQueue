@@ -53,7 +53,7 @@ namespace FrontStage.Controllers
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        [HttpPost]
+        [HttpGet]
         public async Task<WaitCountResponseDto> GetWaitCount()
         {
             return await _queueService.GetWaitCount();

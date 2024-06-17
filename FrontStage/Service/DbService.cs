@@ -1,7 +1,7 @@
 ﻿using FrontStage.Dto;
 using Microsoft.Data.Sqlite;
+using StackExchange.Redis;
 using System.Data;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace FrontStage.Service
 {
@@ -10,25 +10,24 @@ namespace FrontStage.Service
     /// </summary>
     public class DbService
     {
-        private readonly Lazy<SqliteConnection> _connection;
+        private readonly SqliteConnection _con;
         private IConfiguration _configuration;
-        public SqliteConnection _con => _connection.Value;
 
-        public DbService() 
+        public DbService(SqliteConnection con)
         {
-            _connection = new Lazy<SqliteConnection>();
+            _con = con;
         }
 
         /// <summary>
         /// 建立DailyReserve資料表
         /// </summary>
-        private async void InitDailyReserve()
+        private async Task InitDailyReserve()
         {
             try
             {
                 using (_con)
                 {
-                    _con.Open();
+                    Open();
 
                     // 建立 DailyReserve 資料表
                     string sql = @"CREATE TABLE IF NOT EXISTS DailyReserve (
@@ -38,7 +37,7 @@ namespace FrontStage.Service
                                         Phone TEXT,
                                         People TEXT,
                                         QueueNumber INT,
-                                        Flag int,
+                                        Flag int
                                         )";
                     using (var command = new SqliteCommand(sql, _con))
                     {
@@ -56,19 +55,19 @@ namespace FrontStage.Service
         /// <summary>
         /// 建立Reserve資料表
         /// </summary>
-        private async void InitCancelReserve()
+        private async Task InitCancelReserve()
         {
             try
             {
                 using (_con)
                 {
-                    _con.Open();
+                    Open();
 
                     // 建立 Customer 資料表
                     string sql = @"CREATE TABLE IF NOT EXISTS CancelReserve (
                                         ID INTEGER PRIMARY KEY,
-                                        Phone TEXT,
-                                        Count INT
+                                        Time TEXT,
+                                        Phone TEXT
                                         )";
                     using (var command = new SqliteCommand(sql, _con))
                     {
@@ -102,14 +101,14 @@ namespace FrontStage.Service
         /// <returns></returns>
         public async Task<bool> AddDailyReserve(AddDailyReserveDto dto)
         {
-            InitDailyReserve();
+            await InitDailyReserve();
             int result = 0;
 
             try
             {
                 using (_con)
                 {
-                    _con.Open();
+                    Open();
                     string sql = @"INSERT INTO DailyReserve (Time, TakeWay, Phone, People, QueueNumber,Flag) 
                                        VALUES (@Time, @TakeWay, @Phone, @People, @QueueNumber, @Flag)";
                     using (var command = new SqliteCommand(sql, _con))
@@ -125,13 +124,13 @@ namespace FrontStage.Service
                     }
                 }
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 _con.Dispose();
                 Console.WriteLine(ex.ToString());
             }
-               
-            return result == 0 ? false : true ;
+
+            return result == 0 ? false : true;
         }
 
         /// <summary>
@@ -139,50 +138,24 @@ namespace FrontStage.Service
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        public async Task CancelReserve(AddCancelReserveDto dto)
+        public async Task AddCancelReserve(AddCancelReserveDto dto)
         {
-            InitCancelReserve();
-            int result = 0;
-            int cancelCount = 0;
+            await InitCancelReserve();
 
             try
             {
                 using (_con)
                 {
-                    _con.Open();
+                    Open();
 
-                    //搜尋失約紀錄
-                    string selectSql = @"SELECT COUNT(1) CancelReserve WHERE Phone = @Phone";
-                    using (var command = new SqliteCommand(selectSql, _con))
+                    string insertSql = @"INSERT INTO CancelReserve (Phone,Time) 
+                                            VALUES (@Phone, @Time)";
+                    using (var command = new SqliteCommand(insertSql, _con))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
-
-                        cancelCount = (int)await command.ExecuteScalarAsync();
-                    }
-
-                    if(cancelCount == 0)
-                    {
-                        string insertSql = @"INSERT INTO CancelReserve (Phone,Count) 
-                                       VALUES (@Phone, 1)";
-                        using (var command = new SqliteCommand(insertSql, _con))
-                        {
-                            // 設定參數值
-                            command.Parameters.AddWithValue("@Phone", dto.phone);
-
-                            result = await command.ExecuteNonQueryAsync();
-                        }
-                    }
-                    else
-                    {
-                        string insertSql = @"UPDATE CancelReserve SET Count = @Count WHERE PHONE = @PHONE";
-                        using (var command = new SqliteCommand(insertSql, _con))
-                        {
-                            // 設定參數值
-                            command.Parameters.AddWithValue("@Phone", dto.phone);
-                            command.Parameters.AddWithValue("@Count", cancelCount);
-                            result = await command.ExecuteNonQueryAsync();
-                        }
+                        command.Parameters.AddWithValue("@Time", DateTime.UtcNow);
+                        await command.ExecuteNonQueryAsync();
                     }
                 }
             }
@@ -191,6 +164,42 @@ namespace FrontStage.Service
                 _con.Dispose();
                 Console.WriteLine(ex.ToString());
             }
+        }
+
+        /// <summary>
+        /// 查詢取消紀錄
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        public async Task<int> GetCancelRecord(GetCancelRecordDto dto)
+        {
+            await InitCancelReserve();
+            int count = 0;
+
+            try
+            {
+                using (_con)
+                {
+                    Open();
+
+                    //搜尋失約紀錄
+                    string selectSql = @"SELECT COUNT(1) CancelReserve WHERE Phone = @Phone";
+                    using (var command = new SqliteCommand(selectSql, _con))
+                    {
+                        // 設定參數值
+                        command.Parameters.AddWithValue("@Phone", dto.phone);
+
+                        count = (int)await command.ExecuteScalarAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _con.Dispose();
+                Console.WriteLine(ex.ToString());
+            }
+
+            return count;
         }
     }
 }

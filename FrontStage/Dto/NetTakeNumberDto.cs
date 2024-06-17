@@ -5,16 +5,6 @@ namespace FrontStage.Dto
     public class NetTakeNumberDto
     {
         /// <summary>
-        /// 取號時間
-        /// </summary>
-        public DateTime time { get; set; }
-
-        /// <summary>
-        /// 取號方式
-        /// </summary>
-        public TakeWay takeWay { get; set; }
-
-        /// <summary>
         /// 電話
         /// </summary>
         public int phone { get; set; }

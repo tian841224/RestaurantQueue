@@ -17,18 +17,16 @@ namespace FrontStage.Service
 
         public async Task<SpotTakeNumberResponseDto> SpotTakeNumber(SpotTackNumberDto dto)
         {
-            //設定redis
-            _redisService.GetDatabase();
             //redis-上鎖
             await _redisService.AcquireLockAsync();
             //redis-抽號碼
-            var number = await _redisService.GetLastNumber();
+            var number = await _redisService.GetLastNumber(new GetLastNumberDto { people = dto.people });
             //redis-儲存顧客資訊
             await _redisService.AddQueue(new TackNumberDto
             {
                 number = number,
                 time = DateTime.Now,
-                takeWay = dto.takeWay,
+                takeWay = TakeWay.Spot,
                 phone = dto.phone,
                 people = dto.people,
             });
@@ -37,7 +35,9 @@ namespace FrontStage.Service
             //redis-取得目前順位
             var order = await _redisService.GetCustomerOrder(new GetCustomerOrder
             {
-                people = dto.people,
+                tableSize =  dto.people >= 5 ? TableSizeEnum.Big :
+                            dto.people >= 3 && dto.people < 5 ? TableSizeEnum.Medium :
+                            TableSizeEnum.Small,
                 number = number,
             });
 
@@ -59,18 +59,23 @@ namespace FrontStage.Service
             #region 驗證簡訊驗證碼
             #endregion
 
-            //設定redis
-            _redisService.GetDatabase();
+            //db-搜尋失約紀錄
+            int record = await _dbService.GetCancelRecord(new GetCancelRecordDto { phone = dto.phone });
+            if(record >= 3)
+            {
+                throw new Exception("已失約三次，無法預約");
+            }
+
             //redis-上鎖
             await _redisService.AcquireLockAsync();
             //redis-抽號碼
-            var number = await _redisService.GetLastNumber();
+            var number = await _redisService.GetLastNumber(new GetLastNumberDto { people = dto.people });
             //redis-儲存顧客資訊
             await _redisService.AddQueue(new TackNumberDto
             {
                 number = number,
                 time = DateTime.Now,
-                takeWay = dto.takeWay,
+                takeWay = TakeWay.Internet,
                 phone = dto.phone,
                 people = dto.people,
             });
@@ -79,7 +84,9 @@ namespace FrontStage.Service
             //redis-取得目前順位
             var order = await _redisService.GetCustomerOrder(new GetCustomerOrder
             {
-                people = dto.people,
+                tableSize = dto.people >= 5 ? TableSizeEnum.Big :
+                            dto.people >= 3 && dto.people < 5 ? TableSizeEnum.Medium :
+                            TableSizeEnum.Small,
                 number = number,
             });
 
@@ -130,19 +137,16 @@ namespace FrontStage.Service
         public async Task CancelReserve(CancelReserveDto dto)
         {
             //redis-取得客人資訊
-            var customer = await _redisService.GetCustomer(new GetCustomerDto {
-                tableSize = dto.tableSize,
-                number = dto.number });
+            var customer = await _redisService.GetCustomerByPhone(dto.phone);
 
             //redis-移除排隊號碼
             await _redisService.RemoveNumber(new RemoveNumberDto { 
-                tableSize = dto.tableSize,
-                number = dto.number,
-                phone = dto.phone,
+                tableSize = customer.tableSize,
+                number = customer.number,
             });
 
             //db-紀錄失約
-            await _dbService.CancelReserve(new AddCancelReserveDto
+            await _dbService.AddCancelReserve(new AddCancelReserveDto
             {
                 phone = dto.phone,
             });
