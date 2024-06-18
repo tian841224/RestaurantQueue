@@ -1,5 +1,6 @@
 ﻿using FrontStage.Dto;
 using FrontStage.Service;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FrontStage.Controllers
@@ -21,6 +22,7 @@ namespace FrontStage.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<SpotTakeNumberResponseDto> SpotTakeNumber(SpotTackNumberDto dto)
         {
             return await _queueService.SpotTakeNumber(dto);
@@ -32,6 +34,7 @@ namespace FrontStage.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost]
+        [AllowAnonymous]
         public async Task<NetTakeNumberResponseDto> NetTakeNumber(NetTakeNumberDto dto)
         {
             return await _queueService.NetTakeNumber(dto);
@@ -43,6 +46,7 @@ namespace FrontStage.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost]
+        [AllowAnonymous]
         public async Task<int> GetCustomerOrder(GetCustomerOrder dto)
         {
             return await _queueService.GetCustomerOrder(dto);
@@ -54,6 +58,7 @@ namespace FrontStage.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpGet]
+        [AllowAnonymous]
         public async Task<WaitCountResponseDto> GetWaitCount()
         {
             return await _queueService.GetWaitCount();
@@ -65,6 +70,7 @@ namespace FrontStage.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost]
+        [AllowAnonymous]
         public async Task<int> GetWaitCount(GetWaitCountDto dto)
         {
             return await _queueService.GetWaitCount(dto);
@@ -76,6 +82,7 @@ namespace FrontStage.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<QueueList> ConsumeNumber(ConsumeNumberDto dto)
         {
             return await _queueService.ConsumeNumber(dto);
@@ -87,6 +94,7 @@ namespace FrontStage.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task CancelReserve(CancelReserveDto dto)
         {
            await _queueService.CancelReserve(dto);

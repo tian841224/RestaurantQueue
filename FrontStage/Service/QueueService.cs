@@ -120,7 +120,7 @@ namespace FrontStage.Service
             //取下一位客人，並從Redis移除
             var customer = await _redisService.GetAndRemoveNextNumber(new GetNextNumberDto { tableSize = dto.tableSize});
 
-            //將顧客資訊存進db儲存
+            //db-儲存預約紀錄
             await _dbService.AddDailyReserve(new AddDailyReserveDto
             {
                 number = customer.number,
