@@ -136,10 +136,6 @@ namespace FrontStage.Service
         /// <returns></returns>
         public async Task AddQueue(TackNumberDto dto)
         {
-            var tableSize = dto.people >= 5 ? TableSizeEnum.Big :
-                            dto.people >= 3 && dto.people < 5 ? TableSizeEnum.Medium :
-                            TableSizeEnum.Small;
-
             //將參數轉為json
             string customerValue = JsonSerializer.Serialize(new QueueList
             {
@@ -148,10 +144,11 @@ namespace FrontStage.Service
                 takeWay = dto.takeWay,
                 phone = dto.phone,
                 people = dto.people,
-                //tableSize = tableSize,
+                order = dto.order,
+                tableSize = dto.tableSize,
             });
 
-            await redisDb.SortedSetAddAsync($"{redisKey}_{tableSize}", customerValue, (int)dto.number);
+            await redisDb.SortedSetAddAsync($"{redisKey}_{dto.tableSize}", customerValue, (int)dto.number);
         }
 
         /// <summary>

@@ -31,5 +31,15 @@ namespace FrontStage.Dto
         /// 人數
         /// </summary>
         public int people { get; set; }
+
+        /// <summary>
+        /// 目前順位
+        /// </summary>
+        public int order { get; set; }
+
+        /// <summary>
+        /// 桌次
+        /// </summary>
+        public TableSizeEnum tableSize { get; set; }
     }
 }

@@ -16,12 +16,14 @@ namespace FrontStage.Service
         public DbService(SqliteConnection con)
         {
             _con = con;
+            InitDailyReserve();
+            InitCancelReserve();
         }
 
         /// <summary>
         /// 建立DailyReserve資料表
         /// </summary>
-        private async Task InitDailyReserve()
+        private void InitDailyReserve()
         {
             try
             {
@@ -31,17 +33,19 @@ namespace FrontStage.Service
 
                     // 建立 DailyReserve 資料表
                     string sql = @"CREATE TABLE IF NOT EXISTS DailyReserve (
-                                        ID INTEGER PRIMARY KEY,
-                                        Time TEXT,
-                                        TakeWay INT,
-                                        Phone TEXT,
-                                        People TEXT,
-                                        QueueNumber INT,
-                                        Flag int
+                                        [ID] INTEGER PRIMARY KEY,
+                                        [Time] TEXT,
+                                        [TakeWay] INT,
+                                        [Phone] TEXT,
+                                        [People] TEXT,
+                                        [Order] INT,
+                                        [TableSize] TEXT,
+                                        [QueueNumber] INT,
+                                        [Flag] int
                                         )";
                     using (var command = new SqliteCommand(sql, _con))
                     {
-                        await command.ExecuteNonQueryAsync();
+                        command.ExecuteNonQuery();
                     }
                 }
             }
@@ -55,7 +59,7 @@ namespace FrontStage.Service
         /// <summary>
         /// 建立Reserve資料表
         /// </summary>
-        private async Task InitCancelReserve()
+        private void InitCancelReserve()
         {
             try
             {
@@ -65,13 +69,13 @@ namespace FrontStage.Service
 
                     // 建立 Customer 資料表
                     string sql = @"CREATE TABLE IF NOT EXISTS CancelReserve (
-                                        ID INTEGER PRIMARY KEY,
-                                        Time TEXT,
-                                        Phone TEXT
+                                        [ID] INTEGER PRIMARY KEY,
+                                        [Time] TEXT,
+                                        [Phone] TEXT
                                         )";
                     using (var command = new SqliteCommand(sql, _con))
                     {
-                        await command.ExecuteNonQueryAsync();
+                        command.ExecuteNonQuery();
                     }
                 }
             }
@@ -83,8 +87,6 @@ namespace FrontStage.Service
         }
 
         /// <summary>建立資料庫連線</summary>
-        /// <param name="database">資料庫名稱</param>
-        /// <returns></returns>
         private SqliteConnection Open()
         {
 
@@ -101,7 +103,6 @@ namespace FrontStage.Service
         /// <returns></returns>
         public async Task<bool> AddDailyReserve(AddDailyReserveDto dto)
         {
-            await InitDailyReserve();
             int result = 0;
 
             try
@@ -109,16 +110,18 @@ namespace FrontStage.Service
                 using (_con)
                 {
                     Open();
-                    string sql = @"INSERT INTO DailyReserve (Time, TakeWay, Phone, People, QueueNumber,Flag) 
-                                       VALUES (@Time, @TakeWay, @Phone, @People, @QueueNumber, @Flag)";
+                    string sql = @"INSERT INTO DailyReserve ([Time], [TakeWay], [Phone], [People], [QueueNumber], [Order], [TableSize], [Flag]) 
+                                       VALUES (@Time, @TakeWay, @Phone, @People, @QueueNumber, @Order, @TableSize, @Flag)";
                     using (var command = new SqliteCommand(sql, _con))
                     {
                         // 設定參數值
+                        command.Parameters.AddWithValue("@QueueNumber", dto.number);
                         command.Parameters.AddWithValue("@Time", dto.time);
                         command.Parameters.AddWithValue("@TakeWay", dto.takeWay);
                         command.Parameters.AddWithValue("@Phone", dto.phone);
                         command.Parameters.AddWithValue("@People", dto.people);
-                        command.Parameters.AddWithValue("@QueueNumber", dto.number);
+                        command.Parameters.AddWithValue("@Order", dto.order);
+                        command.Parameters.AddWithValue("@TableSize", dto.tableSize);
                         command.Parameters.AddWithValue("@Flag", dto.flag);
                         result = await command.ExecuteNonQueryAsync();
                     }
@@ -140,15 +143,13 @@ namespace FrontStage.Service
         /// <returns></returns>
         public async Task AddCancelReserve(AddCancelReserveDto dto)
         {
-            await InitCancelReserve();
-
             try
             {
                 using (_con)
                 {
                     Open();
 
-                    string insertSql = @"INSERT INTO CancelReserve (Phone,Time) 
+                    string insertSql = @"INSERT INTO CancelReserve ([Phone],[Time]) 
                                             VALUES (@Phone, @Time)";
                     using (var command = new SqliteCommand(insertSql, _con))
                     {
@@ -173,7 +174,6 @@ namespace FrontStage.Service
         /// <returns></returns>
         public async Task<int> GetCancelRecord(GetCancelRecordDto dto)
         {
-            await InitCancelReserve();
             int count = 0;
 
             try
@@ -183,7 +183,7 @@ namespace FrontStage.Service
                     Open();
 
                     //搜尋失約紀錄
-                    string selectSql = @"SELECT COUNT(1) CancelReserve WHERE Phone = @Phone";
+                    string selectSql = @"SELECT COUNT(1) CancelReserve WHERE [Phone] = @Phone";
                     using (var command = new SqliteCommand(selectSql, _con))
                     {
                         // 設定參數值
