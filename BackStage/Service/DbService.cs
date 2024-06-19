@@ -16,6 +16,8 @@ namespace BackStage.Service
         public DbService(SqliteConnection con)
         {
             _con = con;
+            InitDailyReserve();
+            InitBlackList();
         }
 
         /// <summary>建立資料庫連線</summary>
@@ -26,6 +28,70 @@ namespace BackStage.Service
             _con.Open();
 
             return _con;
+        }
+
+        /// <summary>
+        /// 建立DailyReserve資料表
+        /// </summary>
+        private void InitDailyReserve()
+        {
+            try
+            {
+                using (_con)
+                {
+                    Open();
+
+                    // 建立 DailyReserve 資料表
+                    string sql = @"CREATE TABLE IF NOT EXISTS DailyReserve (
+                                        [ID] INTEGER PRIMARY KEY,
+                                        [Time] TEXT,
+                                        [TakeWay] INT,
+                                        [Phone] TEXT,
+                                        [People] TEXT,
+                                        [Order] INT,
+                                        [TableSize] TEXT,
+                                        [QueueNumber] INT,
+                                        [Flag] int
+                                        )";
+                    using (var command = new SqliteCommand(sql, _con))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _con.Dispose();
+                Console.WriteLine(ex.ToString());
+            }
+        }
+
+        private void InitBlackList()
+        {
+            try
+            {
+                using (_con)
+                {
+                    Open();
+
+                    // 建立 Customer 資料表
+                    string sql = @"CREATE TABLE IF NOT EXISTS BlackList (
+                                        [ID] INTEGER PRIMARY KEY,
+                                        [Phone] TEXT,
+                                        [Cancel] INT,
+                                        [Block] INT,
+                                        )";
+                    using (var command = new SqliteCommand(sql, _con))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _con.Dispose();
+                Console.WriteLine(ex.ToString());
+            }
         }
 
         /// <summary>
@@ -79,6 +145,63 @@ namespace BackStage.Service
 
             return dailyReserves;
         }
+        /// <summary>
+        /// 新增黑名單
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        public async Task AddBlackList(AddBlackListDto dto)
+        {
+            try
+            {
+                using (_con)
+                {
+                    Open();
 
+                    string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) 
+                                            VALUES (@Phone,@Cancel,@Block)";
+                    using (var command = new SqliteCommand(insertSql, _con))
+                    {
+                        // 設定參數值
+                        command.Parameters.AddWithValue("@Phone", dto.phone);
+                        command.Parameters.AddWithValue("@Cancel", 0);
+                        command.Parameters.AddWithValue("@Block", 0);
+                        await command.ExecuteNonQueryAsync();
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                _con.Dispose();
+                Console.WriteLine(ex.ToString());
+            }
+        }
+
+        public async Task DeleteBlackList(DeleteBlackListDto dto)
+        {
+            try
+            {
+                using (_con)
+                {
+                    Open();
+
+                    string deleteSql = @"DELETE BlackList WHERE [Phone] = @Phone";
+
+                    using (var command = new SqliteCommand(deleteSql, _con))
+                    {
+                        // 設定參數值
+                        command.Parameters.AddWithValue("@Phone", dto.phone);
+                        await command.ExecuteNonQueryAsync();
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                _con.Dispose();
+                Console.WriteLine(ex.ToString());
+            }
+        }
     }
 }
