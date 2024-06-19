@@ -17,7 +17,7 @@ namespace FrontStage.Service
         {
             _con = con;
             InitDailyReserve();
-            InitCancelReserve();
+            InitBlackList();
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace FrontStage.Service
         /// <summary>
         /// 建立Reserve資料表
         /// </summary>
-        private void InitCancelReserve()
+        private void InitBlackList()
         {
             try
             {
@@ -68,10 +68,11 @@ namespace FrontStage.Service
                     Open();
 
                     // 建立 Customer 資料表
-                    string sql = @"CREATE TABLE IF NOT EXISTS CancelReserve (
+                    string sql = @"CREATE TABLE IF NOT EXISTS BlackList (
                                         [ID] INTEGER PRIMARY KEY,
-                                        [Time] TEXT,
-                                        [Phone] TEXT
+                                        [Phone] TEXT,
+                                        [Cancel] INT,
+                                        [Block] INT,
                                         )";
                     using (var command = new SqliteCommand(sql, _con))
                     {
@@ -149,15 +150,46 @@ namespace FrontStage.Service
                 {
                     Open();
 
-                    string insertSql = @"INSERT INTO CancelReserve ([Phone],[Time]) 
-                                            VALUES (@Phone, @Time)";
-                    using (var command = new SqliteCommand(insertSql, _con))
+                    int cancel = 0;
+
+                    //搜尋失約紀錄
+                    string selectSql = @"SELECT [Cancel] BlackList WHERE [Phone] = @Phone";
+                    using (var command = new SqliteCommand(selectSql, _con))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
-                        command.Parameters.AddWithValue("@Time", DateTime.UtcNow);
-                        await command.ExecuteNonQueryAsync();
+
+                        cancel = (int)await command.ExecuteScalarAsync();
                     }
+
+                    //若沒紀錄則新增
+                    if (cancel == 0)
+                    {
+                        string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) 
+                                            VALUES (@Phone,@Cancel,@Block)";
+                        using (var command = new SqliteCommand(insertSql, _con))
+                        {
+                            // 設定參數值
+                            command.Parameters.AddWithValue("@Phone", dto.phone);
+                            command.Parameters.AddWithValue("@Cancel", 0);
+                            command.Parameters.AddWithValue("@Block", 0);
+                            await command.ExecuteNonQueryAsync();
+                        }
+                    }
+                    else
+                    {
+                        string updateSql = @"UPDATE BlackList SET [Cancel] = @Cancel , [Block]
+                                             WHERE [Phone] = @Phone ";
+                        using (var command = new SqliteCommand(updateSql, _con))
+                        {
+                            // 設定參數值
+                            command.Parameters.AddWithValue("@Phone", dto.phone);
+                            command.Parameters.AddWithValue("@Cancel", cancel + 1);
+                            command.Parameters.AddWithValue("@Block", cancel + 1 == 3 ? 1 : 0);
+                            await command.ExecuteNonQueryAsync();
+                        }
+                    }
+                   
                 }
             }
             catch (Exception ex)
