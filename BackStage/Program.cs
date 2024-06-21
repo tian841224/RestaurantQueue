@@ -1,3 +1,4 @@
+using BackStage.Service;
 using Microsoft.Data.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,11 +9,12 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddScoped<DbService>();
 
 //µù¥Usqlite
 builder.Services.AddScoped(x =>
 {
-    string SavePath = $" {Environment.CurrentDirectory}\\{builder.Configuration["Sqlite:DbName"]}.db";
+    string SavePath = $" ..\\{builder.Configuration["Sqlite:DbName"]}.db";
     return new SqliteConnection($"Data Source={SavePath}");
 });
 

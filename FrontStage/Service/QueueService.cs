@@ -29,11 +29,11 @@ namespace FrontStage.Service
                             TableSizeEnum.Small,
                 number = number,
             });
-            //redis-儲存顧客資訊
+            //redis-加入排隊
             await _redisService.AddQueue(new TackNumberDto
             {
                 number = number,
-                time = DateTime.Now,
+                ticketTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 takeWay = TakeWay.Spot,
                 phone = dto.phone,
                 people = dto.people,
@@ -61,7 +61,7 @@ namespace FrontStage.Service
             #endregion
 
             //db-搜尋失約紀錄
-            int record = await _dbService.GetCancelRecord(new GetCancelRecordDto { phone = dto.phone });
+            var record = await _dbService.GetCancelRecord(new GetCancelRecordDto { phone = dto.phone });
             if (record >= 3)
             {
                 throw new Exception("已失約三次，無法預約");
@@ -85,7 +85,7 @@ namespace FrontStage.Service
             await _redisService.AddQueue(new TackNumberDto
             {
                 number = number,
-                time = DateTime.Now,
+                ticketTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 takeWay = TakeWay.Internet,
                 phone = dto.phone,
                 people = dto.people,
@@ -133,7 +133,8 @@ namespace FrontStage.Service
             await _dbService.AddDailyReserve(new AddDailyReserveDto
             {
                 number = customer.number,
-                time = customer.time,
+                ticketTime = customer.ticketTime,
+                seatTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 takeWay = customer.takeWay,
                 phone = customer.phone,
                 people = customer.people,
@@ -167,7 +168,7 @@ namespace FrontStage.Service
             await _dbService.AddDailyReserve(new AddDailyReserveDto
             {
                 number = customer.number,
-                time = customer.time,
+                ticketTime = customer.ticketTime,
                 takeWay = customer.takeWay,
                 phone = customer.phone,
                 people = customer.people,

@@ -1,6 +1,5 @@
 ﻿using FrontStage.Dto;
 using Microsoft.Data.Sqlite;
-using StackExchange.Redis;
 using System.Data;
 
 namespace FrontStage.Service
@@ -34,7 +33,8 @@ namespace FrontStage.Service
                     // 建立 DailyReserve 資料表
                     string sql = @"CREATE TABLE IF NOT EXISTS DailyReserve (
                                         [ID] INTEGER PRIMARY KEY,
-                                        [Time] TEXT,
+                                        [TicketTime] TEXT,
+                                        [SeatTime] TEXT,
                                         [TakeWay] INT,
                                         [Phone] TEXT,
                                         [People] TEXT,
@@ -72,7 +72,7 @@ namespace FrontStage.Service
                                         [ID] INTEGER PRIMARY KEY,
                                         [Phone] TEXT,
                                         [Cancel] INT,
-                                        [Block] INT,
+                                        [Block] INT
                                         )";
                     using (var command = new SqliteCommand(sql, _con))
                     {
@@ -111,13 +111,14 @@ namespace FrontStage.Service
                 using (_con)
                 {
                     Open();
-                    string sql = @"INSERT INTO DailyReserve ([Time], [TakeWay], [Phone], [People], [QueueNumber], [Order], [TableSize], [Flag]) 
-                                       VALUES (@Time, @TakeWay, @Phone, @People, @QueueNumber, @Order, @TableSize, @Flag)";
+                    string sql = @"INSERT INTO DailyReserve ([TicketTime],[SeatTime], [TakeWay], [Phone], [People], [QueueNumber], [Order], [TableSize], [Flag]) 
+                                       VALUES (@TicketTime,@SeatTime, @TakeWay, @Phone, @People, @QueueNumber, @Order, @TableSize, @Flag)";
                     using (var command = new SqliteCommand(sql, _con))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@QueueNumber", dto.number);
-                        command.Parameters.AddWithValue("@Time", dto.time);
+                        command.Parameters.AddWithValue("@TicketTime", dto.ticketTime);
+                        command.Parameters.AddWithValue("@SeatTime", dto.seatTime);
                         command.Parameters.AddWithValue("@TakeWay", dto.takeWay);
                         command.Parameters.AddWithValue("@Phone", dto.phone);
                         command.Parameters.AddWithValue("@People", dto.people);
@@ -150,46 +151,43 @@ namespace FrontStage.Service
                 {
                     Open();
 
-                    int cancel = 0;
-
                     //搜尋失約紀錄
-                    string selectSql = @"SELECT [Cancel] BlackList WHERE [Phone] = @Phone";
+                    string selectSql = @"SELECT [Cancel] From BlackList WHERE [Phone] = @Phone";
                     using (var command = new SqliteCommand(selectSql, _con))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
 
-                        cancel = (int)await command.ExecuteScalarAsync();
-                    }
+                       var cancel = await command.ExecuteScalarAsync();
 
-                    //若沒紀錄則新增
-                    if (cancel == 0)
-                    {
-                        string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) 
+                        //若沒紀錄則新增
+                        if (cancel == null)
+                        {
+                            string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) 
                                             VALUES (@Phone,@Cancel,@Block)";
-                        using (var command = new SqliteCommand(insertSql, _con))
+                            using (var com = new SqliteCommand(insertSql, _con))
+                            {
+                                // 設定參數值
+                                com.Parameters.AddWithValue("@Phone", dto.phone);
+                                com.Parameters.AddWithValue("@Cancel", 0);
+                                com.Parameters.AddWithValue("@Block", 0);
+                                await com.ExecuteNonQueryAsync();
+                            }
+                        }
+                        else
                         {
-                            // 設定參數值
-                            command.Parameters.AddWithValue("@Phone", dto.phone);
-                            command.Parameters.AddWithValue("@Cancel", 0);
-                            command.Parameters.AddWithValue("@Block", 0);
-                            await command.ExecuteNonQueryAsync();
+                            string updateSql = @"UPDATE BlackList SET [Cancel] = @Cancel , [Block] = @Block
+                                                 WHERE [Phone] = @Phone ";
+                            using (var com = new SqliteCommand(updateSql, _con))
+                            {
+                                // 設定參數值
+                                com.Parameters.AddWithValue("@Phone", dto.phone);
+                                com.Parameters.AddWithValue("@Cancel", (Int64)cancel + 1);
+                                com.Parameters.AddWithValue("@Block", (Int64)cancel + 1 == 3 ? 1 : 0);
+                                await com.ExecuteNonQueryAsync();
+                            }
                         }
                     }
-                    else
-                    {
-                        string updateSql = @"UPDATE BlackList SET [Cancel] = @Cancel , [Block]
-                                             WHERE [Phone] = @Phone ";
-                        using (var command = new SqliteCommand(updateSql, _con))
-                        {
-                            // 設定參數值
-                            command.Parameters.AddWithValue("@Phone", dto.phone);
-                            command.Parameters.AddWithValue("@Cancel", cancel + 1);
-                            command.Parameters.AddWithValue("@Block", cancel + 1 == 3 ? 1 : 0);
-                            await command.ExecuteNonQueryAsync();
-                        }
-                    }
-                   
                 }
             }
             catch (Exception ex)
@@ -204,10 +202,8 @@ namespace FrontStage.Service
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        public async Task<int> GetCancelRecord(GetCancelRecordDto dto)
+        public async Task<long> GetCancelRecord(GetCancelRecordDto dto)
         {
-            int count = 0;
-
             try
             {
                 using (_con)
@@ -215,13 +211,18 @@ namespace FrontStage.Service
                     Open();
 
                     //搜尋失約紀錄
-                    string selectSql = @"SELECT COUNT(1) CancelReserve WHERE [Phone] = @Phone";
+                    string selectSql = @"SELECT [Cancel] From BlackList WHERE [Phone] = @Phone";
                     using (var command = new SqliteCommand(selectSql, _con))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
 
-                        count = (int)await command.ExecuteScalarAsync();
+                        var count = await command.ExecuteScalarAsync();
+
+                        if (count != null)
+                        {
+                            return (long)count;
+                        }
                     }
                 }
             }
@@ -231,7 +232,7 @@ namespace FrontStage.Service
                 Console.WriteLine(ex.ToString());
             }
 
-            return count;
+            return 0;
         }
     }
 }

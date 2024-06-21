@@ -109,7 +109,7 @@ builder.Services.AddAuthentication(options =>
 //µù¥Usqlite
 builder.Services.AddScoped(x =>
 {
-    string SavePath = $" {Environment.CurrentDirectory}\\{builder.Configuration["Sqlite:DbName"]}.db";
+    string SavePath = $" ..\\{builder.Configuration["Sqlite:DbName"]}.db";
     return new SqliteConnection($"Data Source={SavePath}");
 });
 

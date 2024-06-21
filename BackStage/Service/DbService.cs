@@ -2,6 +2,7 @@
 using BackStage.Enum;
 using Microsoft.Data.Sqlite;
 using System.Data;
+using static BackStage.Dto.DailyReserveDto;
 
 namespace BackStage.Service
 {
@@ -44,7 +45,8 @@ namespace BackStage.Service
                     // 建立 DailyReserve 資料表
                     string sql = @"CREATE TABLE IF NOT EXISTS DailyReserve (
                                         [ID] INTEGER PRIMARY KEY,
-                                        [Time] TEXT,
+                                        [TicketTime] TEXT,
+                                        [SeatTime] TEXT,
                                         [TakeWay] INT,
                                         [Phone] TEXT,
                                         [People] TEXT,
@@ -79,7 +81,7 @@ namespace BackStage.Service
                                         [ID] INTEGER PRIMARY KEY,
                                         [Phone] TEXT,
                                         [Cancel] INT,
-                                        [Block] INT,
+                                        [Block] INT
                                         )";
                     using (var command = new SqliteCommand(sql, _con))
                     {
@@ -99,9 +101,10 @@ namespace BackStage.Service
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        public async Task<List<DailyReserveDto>> GetDailyReserve(DailyReportDto dto)
+        public async Task<DailyReserveDto> GetDailyReserve(DailyReportDto dto)
         {
-            List<DailyReserveDto> dailyReserves = new List<DailyReserveDto>();
+            DailyReserveDto dailyReserves = new DailyReserveDto();
+            List<TimeSpan> waitTimes = new List<TimeSpan>();
 
             try
             {
@@ -109,32 +112,55 @@ namespace BackStage.Service
                 {
                     Open();
 
-                    string sql = @"SELECT * FROM DailyReserve 
-                                   WHERE Time >= @StartTime AND Time <= @EndTime";
+                    string sql = @"SELECT *
+                                   FROM DailyReserve 
+                                  ";
 
                     using (var command = new SqliteCommand(sql, _con))
                     {
                         // 設定參數值
-                        command.Parameters.AddWithValue("@StartTime", dto.startTime);
-                        command.Parameters.AddWithValue("@EndTime", dto.endTime);
+                        command.Parameters.AddWithValue("@StartTime", dto.startTime.Value.ToString("yyyy-MM-dd"));
+                        command.Parameters.AddWithValue("@EndTime", dto.endTime.Value.ToString("yyyy-MM-dd"));
 
                         using (var reader = await command.ExecuteReaderAsync())
                         {
                             while (await reader.ReadAsync())
                             {
-                                dailyReserves.Add(new DailyReserveDto
+                                // 讀取並解析日期時間欄位
+                                var ticketTimeString = reader.GetString(reader.GetOrdinal("TicketTime"));
+                                var seatTimeString = reader.GetString(reader.GetOrdinal("SeatTime"));
+
+                                // 解析日期時間
+                                if (DateTime.TryParse(ticketTimeString, out var ticketTime) && DateTime.TryParse(seatTimeString, out var seatTime))
                                 {
-                                    number = reader.GetInt32(reader.GetOrdinal("QueueNumber")),
-                                    time = DateTime.Parse(reader.GetString(reader.GetOrdinal("Time"))),
-                                    takeWay = (TakeWayEnum)reader.GetInt32(reader.GetOrdinal("TakeWay")),
-                                    phone = reader.GetInt32(reader.GetOrdinal("Phone")),
-                                    people = reader.GetInt32(reader.GetOrdinal("People")),
-                                    order = reader.GetInt32(reader.GetOrdinal("Order")),
-                                    tableSize = (TableSizeEnum)reader.GetInt32(reader.GetOrdinal("TableSize"))
-                                });
+                                    // 計算等待時間
+                                    var waitTime = seatTime - ticketTime; 
+                                    waitTimes.Add(waitTime);
+
+                                    dailyReserves.DailyReserves.Add(new DailyReserve
+                                    {
+                                        number = reader.GetInt32(reader.GetOrdinal("QueueNumber")),
+                                        ticketTime = ticketTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                                        seatTime = seatTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                                        waitTime = waitTime.ToString(@"hh\:mm\:ss"),
+                                        takeWay = (TakeWayEnum)reader.GetInt32(reader.GetOrdinal("TakeWay")),
+                                        phone = reader.GetInt32(reader.GetOrdinal("Phone")),
+                                        people = reader.GetInt32(reader.GetOrdinal("People")),
+                                        order = reader.GetInt32(reader.GetOrdinal("Order")),
+                                        tableSize = (TableSizeEnum)reader.GetInt32(reader.GetOrdinal("TableSize"))
+                                    });
+                                }
+                            }
+
+                            //計算平均等待時間
+                            if (waitTimes.Count > 0)
+                            {
+                                dailyReserves.AvgWaitTime = new TimeSpan(waitTimes.Sum(t => t.Ticks) / waitTimes.Count).ToString(@"hh\:mm\:ss");
+
                             }
                         }
                     }
+
                 }
             }
             catch (Exception ex)

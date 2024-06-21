@@ -126,7 +126,7 @@ namespace FrontStage.Service
             if (await redisDb.KeyExistsAsync(key))
             {
                 var element = (await redisDb.SortedSetRangeByScoreAsync($"{key}", dto.number, dto.number)).FirstOrDefault();
-                await redisDb.SortedSetRemoveAsync($"key", element);
+                await redisDb.SortedSetRemoveAsync(key, element);
             }
         }
         /// <summary>
@@ -140,7 +140,7 @@ namespace FrontStage.Service
             string customerValue = JsonSerializer.Serialize(new QueueList
             {
                 number = dto.number.Value,
-                time = dto.time,
+                ticketTime = dto.ticketTime,
                 takeWay = dto.takeWay,
                 phone = dto.phone,
                 people = dto.people,

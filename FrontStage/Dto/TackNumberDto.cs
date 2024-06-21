@@ -15,7 +15,8 @@ namespace FrontStage.Dto
         /// <summary>
         /// 取號時間
         /// </summary>
-        public DateTime time { get; set; }
+        public string ticketTime { get; set; }
+
 
         /// <summary>
         /// 取號方式

@@ -21,9 +21,10 @@ namespace BackStage.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost]
-        public async Task<List<DailyReserveDto>> DailyReport(DailyReportDto dto)
+        public async Task<DailyReserveDto> DailyReport(DailyReportDto dto)
         {
             return await _dbService.GetDailyReserve(dto);
         }
+
     }
 }
