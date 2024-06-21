@@ -8,11 +8,11 @@ namespace BackStage.Controllers
     [Route("[controller]/[action]")]
     public class ReportController : ControllerBase
     {
-        private readonly DbService _dbService;
+        private readonly ReportService _reportService;
 
-        public ReportController(DbService dbService)
+        public ReportController(ReportService reportService)
         {
-            _dbService = dbService;
+            _reportService = reportService;
         }
 
         /// <summary>
@@ -23,7 +23,7 @@ namespace BackStage.Controllers
         [HttpPost]
         public async Task<DailyReserveDto> DailyReport(DailyReportDto dto)
         {
-            return await _dbService.GetDailyReserve(dto);
+            return await _reportService.DailyReport(dto);
         }
 
     }

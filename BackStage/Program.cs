@@ -1,6 +1,7 @@
 using BackStage.Service;
 using Microsoft.Data.Sqlite;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -10,6 +11,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<DbService>();
+builder.Services.AddScoped<ReportService>();
+builder.Services.AddScoped<CustomerService>();
 
 //µù¥Usqlite
 builder.Services.AddScoped(x =>

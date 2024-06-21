@@ -12,7 +12,6 @@ namespace BackStage.Service
     public class DbService
     {
         private readonly SqliteConnection _con;
-        private IConfiguration _configuration;
 
         public DbService(SqliteConnection con)
         {
@@ -112,15 +111,14 @@ namespace BackStage.Service
                 {
                     Open();
 
-                    string sql = @"SELECT *
-                                   FROM DailyReserve 
-                                  ";
+                    string sql = @"SELECT * FROM DailyReserve 
+                                   WHERE [TicketTime] >= @StartTime AND [TicketTime] <= @EndTime ";
 
                     using (var command = new SqliteCommand(sql, _con))
                     {
                         // 設定參數值
-                        command.Parameters.AddWithValue("@StartTime", dto.startTime.Value.ToString("yyyy-MM-dd"));
-                        command.Parameters.AddWithValue("@EndTime", dto.endTime.Value.ToString("yyyy-MM-dd"));
+                        command.Parameters.AddWithValue("@StartTime", dto.startTime.Value.Date);
+                        command.Parameters.AddWithValue("@EndTime", dto.endTime.Value.Date);
 
                         using (var reader = await command.ExecuteReaderAsync())
                         {
@@ -133,16 +131,12 @@ namespace BackStage.Service
                                 // 解析日期時間
                                 if (DateTime.TryParse(ticketTimeString, out var ticketTime) && DateTime.TryParse(seatTimeString, out var seatTime))
                                 {
-                                    // 計算等待時間
-                                    var waitTime = seatTime - ticketTime; 
-                                    waitTimes.Add(waitTime);
-
                                     dailyReserves.DailyReserves.Add(new DailyReserve
                                     {
                                         number = reader.GetInt32(reader.GetOrdinal("QueueNumber")),
-                                        ticketTime = ticketTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                                        seatTime = seatTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                                        waitTime = waitTime.ToString(@"hh\:mm\:ss"),
+                                        ticketTime = ticketTime,
+                                        seatTime = seatTime,
+                                        waitTime = seatTime - ticketTime,
                                         takeWay = (TakeWayEnum)reader.GetInt32(reader.GetOrdinal("TakeWay")),
                                         phone = reader.GetInt32(reader.GetOrdinal("Phone")),
                                         people = reader.GetInt32(reader.GetOrdinal("People")),
@@ -150,13 +144,6 @@ namespace BackStage.Service
                                         tableSize = (TableSizeEnum)reader.GetInt32(reader.GetOrdinal("TableSize"))
                                     });
                                 }
-                            }
-
-                            //計算平均等待時間
-                            if (waitTimes.Count > 0)
-                            {
-                                dailyReserves.AvgWaitTime = new TimeSpan(waitTimes.Sum(t => t.Ticks) / waitTimes.Count).ToString(@"hh\:mm\:ss");
-
                             }
                         }
                     }
@@ -191,7 +178,7 @@ namespace BackStage.Service
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
                         command.Parameters.AddWithValue("@Cancel", 0);
-                        command.Parameters.AddWithValue("@Block", 0);
+                        command.Parameters.AddWithValue("@Block", 1);
                         await command.ExecuteNonQueryAsync();
                     }
 

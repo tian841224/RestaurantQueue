@@ -4,13 +4,21 @@ namespace BackStage.Dto
 {
     public class DailyReserveDto
     {
+        /// <summary>
+        /// 每日記錄
+        /// </summary>
         public List<DailyReserve> DailyReserves { get; set; } = new List<DailyReserve>();
-
 
         /// <summary>
         /// 平均等待時間
         /// </summary>
         public string AvgWaitTime { get; set; }
+
+        /// <summary>
+        /// 餐期平均等待時間
+        /// </summary>
+        public List<MealPeriodTime> MealPeriod { get; set; } = new List<MealPeriodTime>();
+
 
         public class DailyReserve
         {
@@ -22,17 +30,17 @@ namespace BackStage.Dto
             /// <summary>
             /// 取號時間
             /// </summary>
-            public string ticketTime { get; set; }
+            public DateTime ticketTime { get; set; }
 
             /// <summary>
             /// 入座時間
             /// </summary>
-            public string seatTime { get; set; }
+            public DateTime seatTime { get; set; }
 
             /// <summary>
             /// 等待時間
             /// </summary>
-            public string waitTime { get; set; }
+            public TimeSpan waitTime { get; set; }
 
             /// <summary>
             /// 取號方式
@@ -58,6 +66,13 @@ namespace BackStage.Dto
             /// 桌子大小
             /// </summary>
             public TableSizeEnum tableSize { get; set; }
+        }
+
+        public class MealPeriodTime
+        {
+            public int Count { get; set; }
+            public string TimeRange { get; set; }
+            public string AvgWaitTime { get; set; }
         }
     }
 }
