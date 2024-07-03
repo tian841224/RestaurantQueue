@@ -4,12 +4,32 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.Sqlite;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using NLog.Extensions.Logging;
 using System.Reflection;
 using System.Text;
+using NLog;
 
 
 var builder = WebApplication.CreateBuilder(args);
 var jwtConfigSection = builder.Configuration.GetSection(nameof(JwtConfig));
+
+
+//var config = new ConfigurationBuilder()
+//   .SetBasePath(Directory.GetCurrentDirectory())
+//   .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+//   .Build();
+
+LogManager.Configuration = new NLogLoggingConfiguration(builder.Configuration.GetSection("NLog"));
+builder.Services.AddLogging(logging =>
+{
+    //清除原本的 logging provider
+    logging.ClearProviders();
+    //設定 logging 的 minmum level 為 trace
+    logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
+    //使用 NLog 作為 logging provider
+    logging.AddNLog();
+});
+
 builder.Services.Configure<JwtConfig>(jwtConfigSection);
 // Add services to the container.
 
