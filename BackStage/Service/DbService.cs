@@ -11,11 +11,13 @@ namespace BackStage.Service
     /// </summary>
     public class DbService
     {
+        private readonly ILogger<DbService> _log;
         private readonly SqliteConnection _con;
 
-        public DbService(SqliteConnection con)
+        public DbService(SqliteConnection con, ILogger<DbService> log)
         {
             _con = con;
+            _log = log;
             InitDailyReserve();
             InitBlackList();
         }
@@ -23,9 +25,17 @@ namespace BackStage.Service
         /// <summary>建立資料庫連線</summary>
         private SqliteConnection Open()
         {
-
-            if (_con.State == ConnectionState.Open) _con.Close();
-            _con.Open();
+            try
+            {
+                if (_con.State == ConnectionState.Open) _con.Close();
+                _con.Open();
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex.Message);
+                _con.Dispose();
+                throw;
+            }
 
             return _con;
         }
@@ -48,7 +58,7 @@ namespace BackStage.Service
                                         [SeatTime] TEXT,
                                         [TakeWay] INT,
                                         [Phone] TEXT,
-                                        [People] TEXT,
+                                        [People] INT,
                                         [Order] INT,
                                         [TableSize] TEXT,
                                         [QueueNumber] INT,
@@ -147,16 +157,15 @@ namespace BackStage.Service
                             }
                         }
                     }
-
                 }
+                return dailyReserves;
             }
             catch (Exception ex)
             {
+                _log.LogError(ex.Message);
                 _con.Dispose();
-                Console.WriteLine(ex.ToString());
+                throw;
             }
-
-            return dailyReserves;
         }
         /// <summary>
         /// 新增黑名單
@@ -186,8 +195,9 @@ namespace BackStage.Service
             }
             catch (Exception ex)
             {
+                _log.LogError(ex.Message);
                 _con.Dispose();
-                Console.WriteLine(ex.ToString());
+                throw;
             }
         }
 
@@ -212,8 +222,9 @@ namespace BackStage.Service
             }
             catch (Exception ex)
             {
+                _log.LogError(ex.Message);
                 _con.Dispose();
-                Console.WriteLine(ex.ToString());
+                throw;
             }
         }
     }

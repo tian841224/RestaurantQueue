@@ -7,7 +7,7 @@ namespace FrontStage.Dto
         /// <summary>
         /// 取號號碼
         /// </summary>
-        public int number { get; set; }
+        public int queueNumber { get; set; }
 
         /// <summary>
         /// 取號時間
