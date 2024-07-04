@@ -11,5 +11,10 @@
         /// 目前順位
         /// </summary>
         public int order { get; set; }
+
+        /// <summary>
+        /// 取號訊息
+        /// </summary>
+        public string message { get; set; }
     }
 }

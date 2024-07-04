@@ -11,9 +11,12 @@ namespace FrontStage.Service
     {
         private readonly SqliteConnection _con;
         private IConfiguration _configuration;
+        private readonly ILogger<DbService> _log;
 
-        public DbService(SqliteConnection con)
+
+        public DbService(SqliteConnection con, ILogger<DbService> log)
         {
+            _log = log;
             _con = con;
             InitDailyReserve();
             InitBlackList();
@@ -37,7 +40,7 @@ namespace FrontStage.Service
                                         [SeatTime] TEXT,
                                         [TakeWay] INT,
                                         [Phone] TEXT,
-                                        [People] TEXT,
+                                        [People] INT,
                                         [Order] INT,
                                         [TableSize] TEXT,
                                         [QueueNumber] INT,
@@ -51,8 +54,8 @@ namespace FrontStage.Service
             }
             catch (Exception ex)
             {
+                _log.LogError(ex.Message);
                 _con.Dispose();
-                Console.WriteLine(ex.ToString());
             }
         }
 
@@ -82,17 +85,25 @@ namespace FrontStage.Service
             }
             catch (Exception ex)
             {
+                _log.LogError(ex.Message);
                 _con.Dispose();
-                Console.WriteLine(ex.ToString());
             }
         }
 
         /// <summary>建立資料庫連線</summary>
         private SqliteConnection Open()
         {
-
-            if (_con.State == ConnectionState.Open) _con.Close();
-            _con.Open();
+            try
+            {
+                if (_con.State == ConnectionState.Open) _con.Close();
+                _con.Open();
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex.Message);
+                _con.Dispose();
+                throw;
+            }
 
             return _con;
         }
@@ -111,30 +122,37 @@ namespace FrontStage.Service
                 using (_con)
                 {
                     Open();
-                    string sql = @"INSERT INTO DailyReserve ([TicketTime],[SeatTime], [TakeWay], [Phone], [People], [QueueNumber], [Order], [TableSize], [Flag]) 
-                                       VALUES (@TicketTime,@SeatTime, @TakeWay, @Phone, @People, @QueueNumber, @Order, @TableSize, @Flag)";
+                    string sql = @"INSERT INTO DailyReserve ([TicketTime],[SeatTime], [TakeWay], [Phone], [People], [QueueNumber], [Order], [TableSize], [Flag])"+
+                                 @"VALUES (@TicketTime,@SeatTime, @TakeWay, @Phone, @People, @QueueNumber, @Order, @TableSize, @Flag)";
+
                     using (var command = new SqliteCommand(sql, _con))
                     {
                         // 設定參數值
-                        command.Parameters.AddWithValue("@QueueNumber", dto.number);
                         command.Parameters.AddWithValue("@TicketTime", dto.ticketTime);
-                        command.Parameters.AddWithValue("@SeatTime", dto.seatTime);
-                        command.Parameters.AddWithValue("@TakeWay", dto.takeWay);
+                        command.Parameters.AddWithValue("@SeatTime", dto.seatTime ?? string.Empty);
+                        command.Parameters.AddWithValue("@TakeWay", (int)dto.takeWay);
                         command.Parameters.AddWithValue("@Phone", dto.phone);
                         command.Parameters.AddWithValue("@People", dto.people);
+                        command.Parameters.AddWithValue("@QueueNumber", dto.queueNumber);
                         command.Parameters.AddWithValue("@Order", dto.order);
                         command.Parameters.AddWithValue("@TableSize", dto.tableSize);
-                        command.Parameters.AddWithValue("@Flag", dto.flag);
+                        command.Parameters.AddWithValue("@Flag", (int)dto.flag);
                         result = await command.ExecuteNonQueryAsync();
+
+                        if (result > 0) {
+                            _log.LogInformation("Executing SQL: {updateSql} with parameters: TicketTime={TicketTime}, SeatTime={SeatTime}, TakeWay={TakeWay}, Phone={Phone}, People={People}, QueueNumber={QueueNumber}, Order={Order}, TableSize={TableSize} ,Flag={Flag} ",
+                                                sql.Trim(), dto.ticketTime, dto.seatTime, dto.takeWay, dto.phone, dto.people, dto.queueNumber, dto.order , dto.tableSize, dto.flag);
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
+                _log.LogError(ex.Message);
                 _con.Dispose();
-                Console.WriteLine(ex.ToString());
+                throw;
             }
-
+            
             return result == 0 ? false : true;
         }
 
@@ -158,20 +176,24 @@ namespace FrontStage.Service
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
 
-                       var cancel = await command.ExecuteScalarAsync();
+                        var cancel = await command.ExecuteScalarAsync();
 
                         //若沒紀錄則新增
                         if (cancel == null)
                         {
-                            string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) 
-                                            VALUES (@Phone,@Cancel,@Block)";
+                            string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) VALUES (@Phone,@Cancel,@Block)";
                             using (var com = new SqliteCommand(insertSql, _con))
                             {
                                 // 設定參數值
                                 com.Parameters.AddWithValue("@Phone", dto.phone);
                                 com.Parameters.AddWithValue("@Cancel", 0);
                                 com.Parameters.AddWithValue("@Block", 0);
-                                await com.ExecuteNonQueryAsync();
+                                var result = await com.ExecuteNonQueryAsync();
+
+                                if (result > 0)
+                                {
+                                    _log.LogInformation("Executing SQL: {updateSql} with parameters: Phone={phone}, Cancel= 0, Block= 0",insertSql, dto.phone);
+                                }
                             }
                         }
                         else
@@ -184,7 +206,13 @@ namespace FrontStage.Service
                                 com.Parameters.AddWithValue("@Phone", dto.phone);
                                 com.Parameters.AddWithValue("@Cancel", (Int64)cancel + 1);
                                 com.Parameters.AddWithValue("@Block", (Int64)cancel + 1 == 3 ? 1 : 0);
-                                await com.ExecuteNonQueryAsync();
+                                var result = await com.ExecuteNonQueryAsync();
+
+                                if (result > 0)
+                                {
+                                    _log.LogInformation("Executing SQL: {updateSql} with parameters: Phone={phone}, Cancel={cancel}, Block={block}",
+                                                         updateSql, dto.phone, (Int64)cancel + 1, (Int64)cancel + 1 == 3 ? 1 : 0);
+                                }
                             }
                         }
                     }
@@ -192,8 +220,9 @@ namespace FrontStage.Service
             }
             catch (Exception ex)
             {
+                _log.LogError(ex.Message);
                 _con.Dispose();
-                Console.WriteLine(ex.ToString());
+                throw;
             }
         }
 
@@ -228,8 +257,9 @@ namespace FrontStage.Service
             }
             catch (Exception ex)
             {
+                _log.LogError(ex.Message);
                 _con.Dispose();
-                Console.WriteLine(ex.ToString());
+                throw;
             }
 
             return 0;

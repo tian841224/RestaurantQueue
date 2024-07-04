@@ -6,7 +6,7 @@ namespace FrontStage.Dto
     {
         /// 取號號碼
         /// </summary>
-        public int? number { get; set; }
+        public int? queueNumber { get; set; }
 
         /// <summary>
         /// 取號時間
@@ -16,7 +16,7 @@ namespace FrontStage.Dto
         /// <summary>
         /// 入座時間
         /// </summary>
-        public string seatTime { get; set; }
+        public string? seatTime { get; set; }
 
         /// <summary>
         /// 取號方式
