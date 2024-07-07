@@ -2,6 +2,7 @@
 using FrontStage.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using StackExchange.Redis;
 
 namespace FrontStage.Controllers
 {
@@ -23,9 +24,16 @@ namespace FrontStage.Controllers
         /// <returns></returns>
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<SpotTakeNumberResponseDto> SpotTakeNumber(SpotTackNumberDto dto)
+        public async Task<IActionResult> SpotTakeNumber(SpotTackNumberDto dto)
         {
-            return await _queueService.SpotTakeNumber(dto);
+            try
+            {
+                return Ok(await _queueService.SpotTakeNumber(dto));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -35,9 +43,16 @@ namespace FrontStage.Controllers
         /// <returns></returns>
         [HttpPost]
         [AllowAnonymous]
-        public async Task<NetTakeNumberResponseDto> NetTakeNumber(NetTakeNumberDto dto)
+        public async Task<IActionResult> NetTakeNumber(NetTakeNumberDto dto)
         {
-            return await _queueService.NetTakeNumber(dto);
+            try
+            {
+                return Ok(await _queueService.NetTakeNumber(dto));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -47,9 +62,16 @@ namespace FrontStage.Controllers
         /// <returns></returns>
         [HttpPost]
         [AllowAnonymous]
-        public async Task<int> GetCustomerOrder(GetCustomerOrder dto)
+        public async Task<IActionResult> GetCustomerOrder(GetCustomerOrder dto)
         {
-            return await _queueService.GetCustomerOrder(dto);
+            try
+            {
+                return Ok(await _queueService.GetCustomerOrder(dto));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -59,9 +81,16 @@ namespace FrontStage.Controllers
         /// <returns></returns>
         [HttpGet]
         [AllowAnonymous]
-        public async Task<WaitCountResponseDto> GetWaitCount()
+        public async Task<IActionResult> GetWaitCount()
         {
-            return await _queueService.GetWaitCount();
+            try
+            {
+                return Ok(await _queueService.GetWaitCount());
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -71,9 +100,16 @@ namespace FrontStage.Controllers
         /// <returns></returns>
         [HttpPost]
         [AllowAnonymous]
-        public async Task<int> GetWaitCount(GetWaitCountDto dto)
+        public async Task<IActionResult> GetWaitCount(GetWaitCountDto dto)
         {
-            return await _queueService.GetWaitCount(dto);
+            try
+            {
+                return Ok(await _queueService.GetWaitCount(dto));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -83,9 +119,16 @@ namespace FrontStage.Controllers
         /// <returns></returns>
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<QueueList> ConsumeNumber(ConsumeNumberDto dto)
+        public async Task<IActionResult> ConsumeNumber(ConsumeNumberDto dto)
         {
-            return await _queueService.ConsumeNumber(dto);
+            try
+            {
+                return Ok(await _queueService.ConsumeNumber(dto));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
         
         /// <summary>
@@ -95,9 +138,17 @@ namespace FrontStage.Controllers
         /// <returns></returns>
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task CancelReserve(CancelReserveDto dto)
+        public async Task<IActionResult> CancelReserve(CancelReserveDto dto)
         {
-           await _queueService.CancelReserve(dto);
+            try
+            {
+                await _queueService.CancelReserve(dto);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }

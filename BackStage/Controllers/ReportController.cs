@@ -21,9 +21,16 @@ namespace BackStage.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost]
-        public async Task<DailyReserveDto> DailyReport(DailyReportDto dto)
+        public async Task<IActionResult> DailyReport(DailyReportDto dto)
         {
-            return await _reportService.DailyReport(dto);
+            try
+            {
+                return Ok(await _reportService.DailyReport(dto));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
     }

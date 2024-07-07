@@ -21,15 +21,34 @@ namespace BackStage.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost]
-        public async Task AddBlackList(AddBlackListDto dto)
+        public async Task<IActionResult> AddBlackList(AddBlackListDto dto)
         {
-             await _customerService.AddBlackList(dto);
+            try
+            {
+                await _customerService.AddBlackList(dto);
+                return Ok();
+
+            }
+            catch (Exception ex) 
+            {
+                return BadRequest(ex.Message);
+            }
+
         }
 
         [HttpPost]
-        public async Task DeleteBlackList(DeleteBlackListDto dto)
+        public async Task<IActionResult> DeleteBlackList(DeleteBlackListDto dto)
         {
-            await _customerService.DeleteBlackList(dto);
+            try
+            {
+                await _customerService.DeleteBlackList(dto);
+                return Ok();
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }

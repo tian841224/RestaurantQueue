@@ -17,9 +17,16 @@ namespace FrontStage.Controllers
         }
 
         [HttpGet]
-        public IdentityResultDto Login(string role)
+        public IActionResult Login(string role)
         {
-            return _identityService.GenerateToken(role);
+            try
+            {
+                return Ok(_identityService.GenerateToken(role));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }
