@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using NLog;
 using NLog.Web;
+using FrontStage.Middleware;
 
 var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 logger.Info("±Ò°Êµ{¦¡");
@@ -135,7 +136,7 @@ try
     }
 
     app.UseHttpsRedirection();
-
+    app.UseMiddleware<ExceptionHandling>();
     app.UseAuthorization();
 
     app.MapControllers();
