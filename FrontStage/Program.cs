@@ -1,4 +1,3 @@
-using FrontStage.Dto;
 using FrontStage.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.Sqlite;
@@ -8,7 +7,9 @@ using System.Reflection;
 using System.Text;
 using NLog;
 using NLog.Web;
-using FrontStage.Middleware;
+using CommonLibrary.Middleware;
+using CommonLibrary.Service;
+using CommonLibrary.Dto;
 
 var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 logger.Info("±Ò°Êµ{¦¡");

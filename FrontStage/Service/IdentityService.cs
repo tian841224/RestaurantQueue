@@ -1,4 +1,4 @@
-﻿using FrontStage.Dto;
+﻿using CommonLibrary.Dto;
 using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;

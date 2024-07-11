@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FrontStage", "FrontStage\Fr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BackStage", "BackStage\BackStage.csproj", "{2F0292B2-E050-4547-A666-6229359504F6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommonLibrary", "CommonLibrary\CommonLibrary.csproj", "{840921E2-2C2E-4D9A-BC00-E7CDFA1DF6E4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{2F0292B2-E050-4547-A666-6229359504F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2F0292B2-E050-4547-A666-6229359504F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2F0292B2-E050-4547-A666-6229359504F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{840921E2-2C2E-4D9A-BC00-E7CDFA1DF6E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{840921E2-2C2E-4D9A-BC00-E7CDFA1DF6E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{840921E2-2C2E-4D9A-BC00-E7CDFA1DF6E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{840921E2-2C2E-4D9A-BC00-E7CDFA1DF6E4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

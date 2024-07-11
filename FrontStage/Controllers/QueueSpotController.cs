@@ -1,8 +1,8 @@
-﻿using FrontStage.Dto;
+﻿using CommonLibrary.Dto;
+using CommonLibrary.Service;
 using FrontStage.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using StackExchange.Redis;
 
 namespace FrontStage.Controllers
 {

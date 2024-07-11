@@ -1,7 +1,5 @@
-﻿using FrontStage.Dto;
-using FrontStage.Service;
+﻿using FrontStage.Service;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace FrontStage.Controllers
 {
