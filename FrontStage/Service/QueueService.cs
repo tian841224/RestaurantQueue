@@ -1,5 +1,6 @@
 ﻿using CommonLibrary.Dto;
 using CommonLibrary.Enum;
+using CommonLibrary.Interface;
 using CommonLibrary.Service;
 
 namespace FrontStage.Service
@@ -7,10 +8,10 @@ namespace FrontStage.Service
     public class QueueService
     {
         private readonly RedisService _redisService;
-        private readonly DbService _dbService;
+        private readonly IDbService _dbService;
         private readonly ILogger<QueueService> _log;
 
-        public QueueService(RedisService redisService, DbService dbService, ILogger<QueueService> log)
+        public QueueService(RedisService redisService, IDbService dbService, ILogger<QueueService> log)
         {
             _redisService = redisService;
             _dbService = dbService;

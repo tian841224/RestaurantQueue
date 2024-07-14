@@ -1,4 +1,5 @@
 ﻿using CommonLibrary.Dto;
+using CommonLibrary.Interface;
 using CommonLibrary.Service;
 
 namespace BackStage.Service
@@ -6,7 +7,7 @@ namespace BackStage.Service
     public class CustomerService
     {
         private readonly ILogger<CustomerService> _log;
-        private readonly DbService _dbService;
+        private readonly IDbService _dbService;
 
         public CustomerService(DbService dbService, ILogger<CustomerService> log) 
         {

@@ -11,22 +11,28 @@ using CommonLibrary.Middleware;
 using CommonLibrary.Service;
 using CommonLibrary.Dto;
 using CommonLibrary.Interface;
+using MySql.Data.MySqlClient;
 
 var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 logger.Info("啟動程式");
 
 try
 {
-
     var builder = WebApplication.CreateBuilder(args);
     var jwtConfigSection = builder.Configuration.GetSection(nameof(JwtConfig));
 
     builder.Logging.ClearProviders();
     builder.Host.UseNLog();
 
-
     builder.Services.Configure<JwtConfig>(jwtConfigSection);
     // Add services to the container.
+
+    // 註冊MySqlConnection
+    builder.Services.AddScoped(_ =>
+    {
+        var connectionString = builder.Configuration.GetConnectionString("MySQL");
+        return new MySqlConnection(connectionString);
+    });
 
     builder.Services.AddControllers();
     builder.Services.AddScoped<RedisService>();
@@ -37,7 +43,7 @@ try
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     builder.Services.AddEndpointsApiExplorer();
 
-    //設定Swagger
+    // 設定Swagger
     builder.Services.AddSwaggerGen(options =>
     {
         options.SwaggerDoc("v1", new OpenApiInfo
@@ -52,10 +58,9 @@ try
                 Email = "jacky841224j@gmail.com",
                 Url = new Uri("https://github.com/jacky841224j/")
             }
-
         });
 
-        //讓swagger生成註解
+        // 讓swagger生成註解
         var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
         var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
         options.IncludeXmlComments(xmlPath);
@@ -88,45 +93,37 @@ try
             });
     });
 
-    //設定驗證
+    // 設定驗證
     builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
         options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
         options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     })
-        .AddJwtBearer(jwt =>
-        {
-            var config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json")
-                .Build();
-
-            var jwtSecret = config.GetSection("JwtConfig")["SecretKey"];
-
-            if (string.IsNullOrEmpty(jwtSecret))
-            {
-                throw new InvalidOperationException("JwtConfig:Secret is missing or empty in appsettings.json");
-            }
-
-            jwt.SaveToken = true;
-            jwt.TokenValidationParameters = new TokenValidationParameters
-            {
-                RequireExpirationTime = false,
-                ValidateIssuer = false,
-                ValidateAudience = false,
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
-            };
-        });
-
-
-    //註冊sqlite
-    builder.Services.AddScoped(x =>
+    .AddJwtBearer(jwt =>
     {
-        string SavePath = $" ..\\{builder.Configuration["Sqlite:DbName"]}.db";
-        return new SqliteConnection($"Data Source={SavePath}");
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .Build();
+
+        var jwtSecret = config.GetSection("JwtConfig")["SecretKey"];
+
+        if (string.IsNullOrEmpty(jwtSecret))
+        {
+            throw new InvalidOperationException("JwtConfig:Secret is missing or empty in appsettings.json");
+        }
+
+        jwt.SaveToken = true;
+        jwt.TokenValidationParameters = new TokenValidationParameters
+        {
+            RequireExpirationTime = false,
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
     });
 
     var app = builder.Build();
@@ -156,4 +153,3 @@ finally
 {
     LogManager.Shutdown();
 }
-

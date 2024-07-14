@@ -2,6 +2,7 @@ using BackStage.Service;
 using CommonLibrary.Interface;
 using CommonLibrary.Service;
 using Microsoft.Data.Sqlite;
+using MySql.Data.MySqlClient;
 using NLog;
 using NLog.Web;
 
@@ -24,10 +25,16 @@ try
     builder.Services.AddScoped<CustomerService>();
 
     //µù¥Usqlite
+    //builder.Services.AddScoped(x =>
+    //{
+    //    string SavePath = $" ..\\{builder.Configuration["Sqlite:DbName"]}.db";
+    //    return new SqliteConnection($"Data Source={SavePath}");
+    //});
+
+    //µù¥UMysql
     builder.Services.AddScoped(x =>
     {
-        string SavePath = $" ..\\{builder.Configuration["Sqlite:DbName"]}.db";
-        return new SqliteConnection($"Data Source={SavePath}");
+        return new MySqlConnection($"{builder.Configuration["ConnectionStrings:MySQL"]}");
     });
 
     var app = builder.Build();

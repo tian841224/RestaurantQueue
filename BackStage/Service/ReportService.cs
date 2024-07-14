@@ -1,4 +1,5 @@
 ﻿using CommonLibrary.Dto;
+using CommonLibrary.Interface;
 using CommonLibrary.Service;
 using static CommonLibrary.Dto.DailyReserveDto;
 
@@ -6,7 +7,7 @@ namespace BackStage.Service
 {
     public class ReportService
     {
-        private readonly DbService _dbService;
+        private readonly IDbService _dbService;
         private IConfiguration _configuration;
         private readonly ILogger<ReportService> _log;
 

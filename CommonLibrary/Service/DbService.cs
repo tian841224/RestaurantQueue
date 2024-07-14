@@ -20,6 +20,8 @@ namespace CommonLibrary.Service
             _configuration = configuration;
             _log = log;
             _con = con;
+            InitDailyReserve();
+            InitBlackList();
         }
 
         private MySqlConnection Open()
@@ -46,27 +48,25 @@ namespace CommonLibrary.Service
         {
             try
             {
-                using (_con)
-                {
-                    Open();
+                Open();
 
-                    // 建立 DailyReserve 資料表
-                    string sql = @"CREATE TABLE IF NOT EXISTS DailyReserve (
+                // 建立 DailyReserve 資料表
+                string sql = @"CREATE TABLE IF NOT EXISTS DailyReserve (
                                     ID INT AUTO_INCREMENT PRIMARY KEY,
                                     TicketTime DATETIME,
                                     SeatTime DATETIME,
                                     TakeWay TINYINT(1),
                                     Phone VARCHAR(10),
                                     People TINYINT(2),
-                                    Order TINYINT,
+                                    OrderNumber  TINYINT,
                                     TableSize VARCHAR(255),
                                     QueueNumber TINYINT,
                                     Flag TINYINT(1)
                                 );";
-                    using (var command = new SqliteCommand(sql))
-                    {
-                        command.ExecuteNonQuery();
-                    }
+                using (var command = new MySqlCommand(sql, _con))
+                {
+                    var a = command.ExecuteNonQuery();
+
                 }
             }
             catch (Exception ex)
@@ -83,21 +83,18 @@ namespace CommonLibrary.Service
         {
             try
             {
-                using (_con)
-                {
-                    Open();
+                Open();
 
-                    // 建立 Customer 資料表
-                    string sql = @"CREATE TABLE IF NOT EXISTS BlackList (
+                // 建立 Customer 資料表
+                string sql = @"CREATE TABLE IF NOT EXISTS BlackList (
                                         [ID] INTEGER PRIMARY KEY,
                                         [Phone] VARCHAR(10),
                                         [Cancel] TINYINT(1),
                                         [Block] TINYINT(1)
                                         )";
-                    using (var command = new SqliteCommand(sql))
-                    {
-                        command.ExecuteNonQuery();
-                    }
+                using (var command = new MySqlCommand(sql, _con))
+                {
+                    command.ExecuteNonQuery();
                 }
             }
             catch (Exception ex)
@@ -118,31 +115,28 @@ namespace CommonLibrary.Service
 
             try
             {
-                using (_con)
+                Open();
+                string sql = @"INSERT INTO DailyReserve ([TicketTime],[SeatTime], [TakeWay], [Phone], [People], [QueueNumber], [OrderNumber], [TableSize], [Flag])" +
+                             @"VALUES (@TicketTime,@SeatTime, @TakeWay, @Phone, @People, @QueueNumber, @Order, @TableSize, @Flag)";
+
+                using (var command = new MySqlCommand(sql))
                 {
-                    Open();
-                    string sql = @"INSERT INTO DailyReserve ([TicketTime],[SeatTime], [TakeWay], [Phone], [People], [QueueNumber], [Order], [TableSize], [Flag])" +
-                                 @"VALUES (@TicketTime,@SeatTime, @TakeWay, @Phone, @People, @QueueNumber, @Order, @TableSize, @Flag)";
+                    // 設定參數值
+                    command.Parameters.AddWithValue("@TicketTime", dto.ticketTime);
+                    command.Parameters.AddWithValue("@SeatTime", dto.seatTime ?? string.Empty);
+                    command.Parameters.AddWithValue("@TakeWay", (int)dto.takeWay);
+                    command.Parameters.AddWithValue("@Phone", dto.phone);
+                    command.Parameters.AddWithValue("@People", dto.people);
+                    command.Parameters.AddWithValue("@QueueNumber", dto.queueNumber);
+                    command.Parameters.AddWithValue("@Order", dto.order);
+                    command.Parameters.AddWithValue("@TableSize", dto.tableSize);
+                    command.Parameters.AddWithValue("@Flag", (int)dto.flag);
+                    result = await command.ExecuteNonQueryAsync();
 
-                    using (var command = new MySqlCommand(sql))
+                    if (result > 0)
                     {
-                        // 設定參數值
-                        command.Parameters.AddWithValue("@TicketTime", dto.ticketTime);
-                        command.Parameters.AddWithValue("@SeatTime", dto.seatTime ?? string.Empty);
-                        command.Parameters.AddWithValue("@TakeWay", (int)dto.takeWay);
-                        command.Parameters.AddWithValue("@Phone", dto.phone);
-                        command.Parameters.AddWithValue("@People", dto.people);
-                        command.Parameters.AddWithValue("@QueueNumber", dto.queueNumber);
-                        command.Parameters.AddWithValue("@Order", dto.order);
-                        command.Parameters.AddWithValue("@TableSize", dto.tableSize);
-                        command.Parameters.AddWithValue("@Flag", (int)dto.flag);
-                        result = await command.ExecuteNonQueryAsync();
-
-                        if (result > 0)
-                        {
-                            _log.LogInformation("Executing SQL: {updateSql} with parameters: TicketTime={TicketTime}, SeatTime={SeatTime}, TakeWay={TakeWay}, Phone={Phone}, People={People}, QueueNumber={QueueNumber}, Order={Order}, TableSize={TableSize} ,Flag={Flag} ",
-                                                sql.Trim(), dto.ticketTime, dto.seatTime, dto.takeWay, dto.phone, dto.people, dto.queueNumber, dto.order, dto.tableSize, dto.flag);
-                        }
+                        _log.LogInformation("Executing SQL: {updateSql} with parameters: TicketTime={TicketTime}, SeatTime={SeatTime}, TakeWay={TakeWay}, Phone={Phone}, People={People}, QueueNumber={QueueNumber}, Order={Order}, TableSize={TableSize} ,Flag={Flag} ",
+                                            sql.Trim(), dto.ticketTime, dto.seatTime, dto.takeWay, dto.phone, dto.people, dto.queueNumber, dto.order, dto.tableSize, dto.flag);
                     }
                 }
             }
@@ -165,54 +159,51 @@ namespace CommonLibrary.Service
         {
             try
             {
-                using (_con)
+                Open();
+
+                //搜尋失約紀錄
+                string selectSql = @"SELECT [Cancel] From BlackList WHERE [Phone] = @Phone";
+                using (var command = new MySqlCommand(selectSql))
                 {
-                    Open();
+                    // 設定參數值
+                    command.Parameters.AddWithValue("@Phone", dto.phone);
 
-                    //搜尋失約紀錄
-                    string selectSql = @"SELECT [Cancel] From BlackList WHERE [Phone] = @Phone";
-                    using (var command = new MySqlCommand(selectSql))
+                    var cancel = await command.ExecuteScalarAsync();
+
+                    //若沒紀錄則新增
+                    if (cancel == null)
                     {
-                        // 設定參數值
-                        command.Parameters.AddWithValue("@Phone", dto.phone);
-
-                        var cancel = await command.ExecuteScalarAsync();
-
-                        //若沒紀錄則新增
-                        if (cancel == null)
+                        string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) VALUES (@Phone,@Cancel,@Block)";
+                        using (var com = new MySqlCommand(insertSql))
                         {
-                            string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) VALUES (@Phone,@Cancel,@Block)";
-                            using (var com = new MySqlCommand(insertSql))
-                            {
-                                // 設定參數值
-                                com.Parameters.AddWithValue("@Phone", dto.phone);
-                                com.Parameters.AddWithValue("@Cancel", 0);
-                                com.Parameters.AddWithValue("@Block", 0);
-                                var result = await com.ExecuteNonQueryAsync();
+                            // 設定參數值
+                            com.Parameters.AddWithValue("@Phone", dto.phone);
+                            com.Parameters.AddWithValue("@Cancel", 0);
+                            com.Parameters.AddWithValue("@Block", 0);
+                            var result = await com.ExecuteNonQueryAsync();
 
-                                if (result > 0)
-                                {
-                                    _log.LogInformation("Executing SQL: {updateSql} with parameters: Phone={phone}, Cancel= 0, Block= 0", insertSql, dto.phone);
-                                }
+                            if (result > 0)
+                            {
+                                _log.LogInformation("Executing SQL: {updateSql} with parameters: Phone={phone}, Cancel= 0, Block= 0", insertSql, dto.phone);
                             }
                         }
-                        else
-                        {
-                            string updateSql = @"UPDATE BlackList SET [Cancel] = @Cancel , [Block] = @Block
+                    }
+                    else
+                    {
+                        string updateSql = @"UPDATE BlackList SET [Cancel] = @Cancel , [Block] = @Block
                                                  WHERE [Phone] = @Phone ";
-                            using (var com = new MySqlCommand(updateSql))
-                            {
-                                // 設定參數值
-                                com.Parameters.AddWithValue("@Phone", dto.phone);
-                                com.Parameters.AddWithValue("@Cancel", (long)cancel + 1);
-                                com.Parameters.AddWithValue("@Block", (long)cancel + 1 == 3 ? 1 : 0);
-                                var result = await com.ExecuteNonQueryAsync();
+                        using (var com = new MySqlCommand(updateSql))
+                        {
+                            // 設定參數值
+                            com.Parameters.AddWithValue("@Phone", dto.phone);
+                            com.Parameters.AddWithValue("@Cancel", (long)cancel + 1);
+                            com.Parameters.AddWithValue("@Block", (long)cancel + 1 == 3 ? 1 : 0);
+                            var result = await com.ExecuteNonQueryAsync();
 
-                                if (result > 0)
-                                {
-                                    _log.LogInformation("Executing SQL: {updateSql} with parameters: Phone={phone}, Cancel={cancel}, Block={block}",
-                                                         updateSql, dto.phone, (long)cancel + 1, (long)cancel + 1 == 3 ? 1 : 0);
-                                }
+                            if (result > 0)
+                            {
+                                _log.LogInformation("Executing SQL: {updateSql} with parameters: Phone={phone}, Cancel={cancel}, Block={block}",
+                                                     updateSql, dto.phone, (long)cancel + 1, (long)cancel + 1 == 3 ? 1 : 0);
                             }
                         }
                     }
@@ -235,23 +226,20 @@ namespace CommonLibrary.Service
         {
             try
             {
-                using (_con)
+                Open();
+
+                //搜尋失約紀錄
+                string selectSql = @"SELECT [Cancel] From BlackList WHERE [Phone] = @Phone";
+                using (var command = new MySqlCommand(selectSql))
                 {
-                    Open();
+                    // 設定參數值
+                    command.Parameters.AddWithValue("@Phone", dto.phone);
 
-                    //搜尋失約紀錄
-                    string selectSql = @"SELECT [Cancel] From BlackList WHERE [Phone] = @Phone";
-                    using (var command = new MySqlCommand(selectSql))
+                    var count = await command.ExecuteScalarAsync();
+
+                    if (count != null)
                     {
-                        // 設定參數值
-                        command.Parameters.AddWithValue("@Phone", dto.phone);
-
-                        var count = await command.ExecuteScalarAsync();
-
-                        if (count != null)
-                        {
-                            return (long)count;
-                        }
+                        return (long)count;
                     }
                 }
             }
@@ -277,43 +265,40 @@ namespace CommonLibrary.Service
 
             try
             {
-                using (_con)
-                {
-                    Open();
+                Open();
 
-                    string sql = @"SELECT * FROM DailyReserve 
+                string sql = @"SELECT * FROM DailyReserve 
                                    WHERE [TicketTime] >= @StartTime AND [TicketTime] <= @EndTime ";
 
-                    using (var command = new MySqlCommand(sql))
+                using (var command = new MySqlCommand(sql))
+                {
+                    // 設定參數值
+                    command.Parameters.AddWithValue("@StartTime", dto.startTime.Value.Date);
+                    command.Parameters.AddWithValue("@EndTime", dto.endTime.Value.Date);
+
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        // 設定參數值
-                        command.Parameters.AddWithValue("@StartTime", dto.startTime.Value.Date);
-                        command.Parameters.AddWithValue("@EndTime", dto.endTime.Value.Date);
-
-                        using (var reader = await command.ExecuteReaderAsync())
+                        while (await reader.ReadAsync())
                         {
-                            while (await reader.ReadAsync())
-                            {
-                                // 讀取並解析日期時間欄位
-                                var ticketTimeString = reader.GetString(reader.GetOrdinal("TicketTime"));
-                                var seatTimeString = reader.GetString(reader.GetOrdinal("SeatTime"));
+                            // 讀取並解析日期時間欄位
+                            var ticketTimeString = reader.GetString(reader.GetOrdinal("TicketTime"));
+                            var seatTimeString = reader.GetString(reader.GetOrdinal("SeatTime"));
 
-                                // 解析日期時間
-                                if (DateTime.TryParse(ticketTimeString, out var ticketTime) && DateTime.TryParse(seatTimeString, out var seatTime))
+                            // 解析日期時間
+                            if (DateTime.TryParse(ticketTimeString, out var ticketTime) && DateTime.TryParse(seatTimeString, out var seatTime))
+                            {
+                                dailyReserves.DailyReserves.Add(new DailyReserve
                                 {
-                                    dailyReserves.DailyReserves.Add(new DailyReserve
-                                    {
-                                        number = reader.GetInt32(reader.GetOrdinal("QueueNumber")),
-                                        ticketTime = ticketTime,
-                                        seatTime = seatTime,
-                                        waitTime = seatTime - ticketTime,
-                                        takeWay = (TakeWayEnum)reader.GetInt32(reader.GetOrdinal("TakeWay")),
-                                        phone = reader.GetInt32(reader.GetOrdinal("Phone")),
-                                        people = reader.GetInt32(reader.GetOrdinal("People")),
-                                        order = reader.GetInt32(reader.GetOrdinal("Order")),
-                                        tableSize = (TableSizeEnum)reader.GetInt32(reader.GetOrdinal("TableSize"))
-                                    });
-                                }
+                                    number = reader.GetInt32(reader.GetOrdinal("QueueNumber")),
+                                    ticketTime = ticketTime,
+                                    seatTime = seatTime,
+                                    waitTime = seatTime - ticketTime,
+                                    takeWay = (TakeWayEnum)reader.GetInt32(reader.GetOrdinal("TakeWay")),
+                                    phone = reader.GetInt32(reader.GetOrdinal("Phone")),
+                                    people = reader.GetInt32(reader.GetOrdinal("People")),
+                                    order = reader.GetInt32(reader.GetOrdinal("Order")),
+                                    tableSize = (TableSizeEnum)reader.GetInt32(reader.GetOrdinal("TableSize"))
+                                });
                             }
                         }
                     }
@@ -337,21 +322,17 @@ namespace CommonLibrary.Service
         {
             try
             {
-                using (_con)
-                {
-                    Open();
+                Open();
 
-                    string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) 
+                string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) 
                                             VALUES (@Phone,@Cancel,@Block)";
-                    using (var command = new MySqlCommand(insertSql))
-                    {
-                        // 設定參數值
-                        command.Parameters.AddWithValue("@Phone", dto.phone);
-                        command.Parameters.AddWithValue("@Cancel", 0);
-                        command.Parameters.AddWithValue("@Block", 1);
-                        await command.ExecuteNonQueryAsync();
-                    }
-
+                using (var command = new MySqlCommand(insertSql))
+                {
+                    // 設定參數值
+                    command.Parameters.AddWithValue("@Phone", dto.phone);
+                    command.Parameters.AddWithValue("@Cancel", 0);
+                    command.Parameters.AddWithValue("@Block", 1);
+                    await command.ExecuteNonQueryAsync();
                 }
             }
             catch (Exception ex)
@@ -371,19 +352,15 @@ namespace CommonLibrary.Service
         {
             try
             {
-                using (_con)
+                Open();
+
+                string deleteSql = @"DELETE BlackList WHERE [Phone] = @Phone";
+
+                using (var command = new MySqlCommand(deleteSql))
                 {
-                    Open();
-
-                    string deleteSql = @"DELETE BlackList WHERE [Phone] = @Phone";
-
-                    using (var command = new MySqlCommand(deleteSql))
-                    {
-                        // 設定參數值
-                        command.Parameters.AddWithValue("@Phone", dto.phone);
-                        await command.ExecuteNonQueryAsync();
-                    }
-
+                    // 設定參數值
+                    command.Parameters.AddWithValue("@Phone", dto.phone);
+                    await command.ExecuteNonQueryAsync();
                 }
             }
             catch (Exception ex)
