@@ -1,29 +1,42 @@
 ﻿using CommonLibrary.Dto;
 using CommonLibrary.Enum;
+using CommonLibrary.Interface;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MySql.Data.MySqlClient;
 using System.Data;
 using static CommonLibrary.Dto.DailyReserveDto;
 
 namespace CommonLibrary.Service
 {
-    /// <summary>
-    /// 資料庫服務
-    /// </summary>
-    public class DbService
+    public class DbService : IDbService
     {
-        private readonly SqliteConnection _con;
         private IConfiguration _configuration;
         private readonly ILogger<DbService> _log;
-
-
-        public DbService(SqliteConnection con, ILogger<DbService> log)
+        private readonly MySqlConnection _con;
+        public DbService(IConfiguration configuration, ILogger<DbService> log , MySqlConnection con) 
         {
+            _configuration = configuration;
             _log = log;
             _con = con;
-            InitDailyReserve();
-            InitBlackList();
+        }
+
+        private MySqlConnection Open()
+        {
+            try
+            {
+                if (_con.State == ConnectionState.Open) _con.Close();
+                _con.Open();
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex.Message);
+                _con.Dispose();
+                throw;
+            }
+
+            return _con;
         }
 
         /// <summary>
@@ -50,7 +63,7 @@ namespace CommonLibrary.Service
                                         [QueueNumber] INT,
                                         [Flag] int
                                         )";
-                    using (var command = new SqliteCommand(sql, _con))
+                    using (var command = new SqliteCommand(sql))
                     {
                         command.ExecuteNonQuery();
                     }
@@ -81,7 +94,7 @@ namespace CommonLibrary.Service
                                         [Cancel] INT,
                                         [Block] INT
                                         )";
-                    using (var command = new SqliteCommand(sql, _con))
+                    using (var command = new SqliteCommand(sql))
                     {
                         command.ExecuteNonQuery();
                     }
@@ -92,24 +105,6 @@ namespace CommonLibrary.Service
                 _log.LogError(ex.Message);
                 _con.Dispose();
             }
-        }
-
-        /// <summary>建立資料庫連線</summary>
-        private SqliteConnection Open()
-        {
-            try
-            {
-                if (_con.State == ConnectionState.Open) _con.Close();
-                _con.Open();
-            }
-            catch (Exception ex)
-            {
-                _log.LogError(ex.Message);
-                _con.Dispose();
-                throw;
-            }
-
-            return _con;
         }
 
         /// <summary>
@@ -129,7 +124,7 @@ namespace CommonLibrary.Service
                     string sql = @"INSERT INTO DailyReserve ([TicketTime],[SeatTime], [TakeWay], [Phone], [People], [QueueNumber], [Order], [TableSize], [Flag])" +
                                  @"VALUES (@TicketTime,@SeatTime, @TakeWay, @Phone, @People, @QueueNumber, @Order, @TableSize, @Flag)";
 
-                    using (var command = new SqliteCommand(sql, _con))
+                    using (var command = new SqliteCommand(sql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@TicketTime", dto.ticketTime);
@@ -176,7 +171,7 @@ namespace CommonLibrary.Service
 
                     //搜尋失約紀錄
                     string selectSql = @"SELECT [Cancel] From BlackList WHERE [Phone] = @Phone";
-                    using (var command = new SqliteCommand(selectSql, _con))
+                    using (var command = new SqliteCommand(selectSql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
@@ -187,7 +182,7 @@ namespace CommonLibrary.Service
                         if (cancel == null)
                         {
                             string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) VALUES (@Phone,@Cancel,@Block)";
-                            using (var com = new SqliteCommand(insertSql, _con))
+                            using (var com = new SqliteCommand(insertSql))
                             {
                                 // 設定參數值
                                 com.Parameters.AddWithValue("@Phone", dto.phone);
@@ -205,7 +200,7 @@ namespace CommonLibrary.Service
                         {
                             string updateSql = @"UPDATE BlackList SET [Cancel] = @Cancel , [Block] = @Block
                                                  WHERE [Phone] = @Phone ";
-                            using (var com = new SqliteCommand(updateSql, _con))
+                            using (var com = new SqliteCommand(updateSql))
                             {
                                 // 設定參數值
                                 com.Parameters.AddWithValue("@Phone", dto.phone);
@@ -246,7 +241,7 @@ namespace CommonLibrary.Service
 
                     //搜尋失約紀錄
                     string selectSql = @"SELECT [Cancel] From BlackList WHERE [Phone] = @Phone";
-                    using (var command = new SqliteCommand(selectSql, _con))
+                    using (var command = new SqliteCommand(selectSql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
@@ -269,6 +264,7 @@ namespace CommonLibrary.Service
 
             return 0;
         }
+
         /// <summary>
         /// 取得預約紀錄
         /// </summary>
@@ -288,7 +284,7 @@ namespace CommonLibrary.Service
                     string sql = @"SELECT * FROM DailyReserve 
                                    WHERE [TicketTime] >= @StartTime AND [TicketTime] <= @EndTime ";
 
-                    using (var command = new SqliteCommand(sql, _con))
+                    using (var command = new SqliteCommand(sql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@StartTime", dto.startTime.Value.Date);
@@ -331,6 +327,7 @@ namespace CommonLibrary.Service
                 throw;
             }
         }
+
         /// <summary>
         /// 新增黑名單
         /// </summary>
@@ -346,7 +343,7 @@ namespace CommonLibrary.Service
 
                     string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) 
                                             VALUES (@Phone,@Cancel,@Block)";
-                    using (var command = new SqliteCommand(insertSql, _con))
+                    using (var command = new SqliteCommand(insertSql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
@@ -365,6 +362,11 @@ namespace CommonLibrary.Service
             }
         }
 
+        /// <summary>
+        /// 移除黑名單
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
         public async Task DeleteBlackList(DeleteBlackListDto dto)
         {
             try
@@ -375,7 +377,7 @@ namespace CommonLibrary.Service
 
                     string deleteSql = @"DELETE BlackList WHERE [Phone] = @Phone";
 
-                    using (var command = new SqliteCommand(deleteSql, _con))
+                    using (var command = new SqliteCommand(deleteSql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
