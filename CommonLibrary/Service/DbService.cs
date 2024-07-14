@@ -52,17 +52,17 @@ namespace CommonLibrary.Service
 
                     // 建立 DailyReserve 資料表
                     string sql = @"CREATE TABLE IF NOT EXISTS DailyReserve (
-                                        [ID] INTEGER PRIMARY KEY,
-                                        [TicketTime] TEXT,
-                                        [SeatTime] TEXT,
-                                        [TakeWay] INT,
-                                        [Phone] TEXT,
-                                        [People] INT,
-                                        [Order] INT,
-                                        [TableSize] TEXT,
-                                        [QueueNumber] INT,
-                                        [Flag] int
-                                        )";
+                                    ID INT AUTO_INCREMENT PRIMARY KEY,
+                                    TicketTime DATETIME,
+                                    SeatTime DATETIME,
+                                    TakeWay TINYINT(1),
+                                    Phone VARCHAR(10),
+                                    People TINYINT(2),
+                                    Order TINYINT,
+                                    TableSize VARCHAR(255),
+                                    QueueNumber TINYINT,
+                                    Flag TINYINT(1)
+                                );";
                     using (var command = new SqliteCommand(sql))
                     {
                         command.ExecuteNonQuery();
@@ -90,9 +90,9 @@ namespace CommonLibrary.Service
                     // 建立 Customer 資料表
                     string sql = @"CREATE TABLE IF NOT EXISTS BlackList (
                                         [ID] INTEGER PRIMARY KEY,
-                                        [Phone] TEXT,
-                                        [Cancel] INT,
-                                        [Block] INT
+                                        [Phone] VARCHAR(10),
+                                        [Cancel] TINYINT(1),
+                                        [Block] TINYINT(1)
                                         )";
                     using (var command = new SqliteCommand(sql))
                     {
@@ -124,7 +124,7 @@ namespace CommonLibrary.Service
                     string sql = @"INSERT INTO DailyReserve ([TicketTime],[SeatTime], [TakeWay], [Phone], [People], [QueueNumber], [Order], [TableSize], [Flag])" +
                                  @"VALUES (@TicketTime,@SeatTime, @TakeWay, @Phone, @People, @QueueNumber, @Order, @TableSize, @Flag)";
 
-                    using (var command = new SqliteCommand(sql))
+                    using (var command = new MySqlCommand(sql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@TicketTime", dto.ticketTime);
@@ -171,7 +171,7 @@ namespace CommonLibrary.Service
 
                     //搜尋失約紀錄
                     string selectSql = @"SELECT [Cancel] From BlackList WHERE [Phone] = @Phone";
-                    using (var command = new SqliteCommand(selectSql))
+                    using (var command = new MySqlCommand(selectSql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
@@ -182,7 +182,7 @@ namespace CommonLibrary.Service
                         if (cancel == null)
                         {
                             string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) VALUES (@Phone,@Cancel,@Block)";
-                            using (var com = new SqliteCommand(insertSql))
+                            using (var com = new MySqlCommand(insertSql))
                             {
                                 // 設定參數值
                                 com.Parameters.AddWithValue("@Phone", dto.phone);
@@ -200,7 +200,7 @@ namespace CommonLibrary.Service
                         {
                             string updateSql = @"UPDATE BlackList SET [Cancel] = @Cancel , [Block] = @Block
                                                  WHERE [Phone] = @Phone ";
-                            using (var com = new SqliteCommand(updateSql))
+                            using (var com = new MySqlCommand(updateSql))
                             {
                                 // 設定參數值
                                 com.Parameters.AddWithValue("@Phone", dto.phone);
@@ -241,7 +241,7 @@ namespace CommonLibrary.Service
 
                     //搜尋失約紀錄
                     string selectSql = @"SELECT [Cancel] From BlackList WHERE [Phone] = @Phone";
-                    using (var command = new SqliteCommand(selectSql))
+                    using (var command = new MySqlCommand(selectSql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
@@ -284,7 +284,7 @@ namespace CommonLibrary.Service
                     string sql = @"SELECT * FROM DailyReserve 
                                    WHERE [TicketTime] >= @StartTime AND [TicketTime] <= @EndTime ";
 
-                    using (var command = new SqliteCommand(sql))
+                    using (var command = new MySqlCommand(sql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@StartTime", dto.startTime.Value.Date);
@@ -343,7 +343,7 @@ namespace CommonLibrary.Service
 
                     string insertSql = @"INSERT INTO BlackList ([Phone],[Cancel],[Block]) 
                                             VALUES (@Phone,@Cancel,@Block)";
-                    using (var command = new SqliteCommand(insertSql))
+                    using (var command = new MySqlCommand(insertSql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
@@ -377,7 +377,7 @@ namespace CommonLibrary.Service
 
                     string deleteSql = @"DELETE BlackList WHERE [Phone] = @Phone";
 
-                    using (var command = new SqliteCommand(deleteSql))
+                    using (var command = new MySqlCommand(deleteSql))
                     {
                         // 設定參數值
                         command.Parameters.AddWithValue("@Phone", dto.phone);
