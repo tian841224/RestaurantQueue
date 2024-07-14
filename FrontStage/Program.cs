@@ -10,6 +10,7 @@ using NLog.Web;
 using CommonLibrary.Middleware;
 using CommonLibrary.Service;
 using CommonLibrary.Dto;
+using CommonLibrary.Interface;
 
 var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 logger.Info("±Ò°Êµ{¦¡");
@@ -19,6 +20,7 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
     var jwtConfigSection = builder.Configuration.GetSection(nameof(JwtConfig));
+
     builder.Logging.ClearProviders();
     builder.Host.UseNLog();
 
@@ -28,7 +30,7 @@ try
 
     builder.Services.AddControllers();
     builder.Services.AddScoped<RedisService>();
-    builder.Services.AddScoped<DbService>();
+    builder.Services.AddScoped<IDbService, DbService>();
     builder.Services.AddScoped<QueueService>();
     builder.Services.AddScoped<IdentityService>();
 

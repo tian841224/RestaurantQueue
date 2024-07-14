@@ -1,4 +1,5 @@
 using BackStage.Service;
+using CommonLibrary.Interface;
 using CommonLibrary.Service;
 using Microsoft.Data.Sqlite;
 using NLog;
@@ -18,7 +19,7 @@ try
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
-    builder.Services.AddScoped<DbService>();
+    builder.Services.AddScoped<IDbService, DbService>();
     builder.Services.AddScoped<ReportService>();
     builder.Services.AddScoped<CustomerService>();
 
