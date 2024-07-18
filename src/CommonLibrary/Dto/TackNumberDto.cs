@@ -15,7 +15,7 @@ namespace CommonLibrary.Dto
         /// <summary>
         /// 取號時間
         /// </summary>
-        public string ticketTime { get; set; }
+        public string ticketTime { get; set; } = string.Empty;
 
 
         /// <summary>

@@ -46,19 +46,19 @@ try
     // 設定Swagger
     builder.Services.AddSwaggerGen(options =>
     {
-        options.SwaggerDoc("v1", new OpenApiInfo
-        {
-            Version = "v1",
-            Title = "餐廳候位取號系統",
-            Description = "餐廳候位取號系統",
-            TermsOfService = new Uri("https://igouist.github.io/post/2021/10/swagger-enable-authorize/"),
-            Contact = new OpenApiContact
-            {
-                Name = "Tian",
-                Email = "jacky841224j@gmail.com",
-                Url = new Uri("https://github.com/jacky841224j/")
-            }
-        });
+        //options.SwaggerDoc("v1", new OpenApiInfo
+        //{
+        //    Version = "v1",
+        //    Title = "餐廳候位取號系統",
+        //    Description = "餐廳候位取號系統",
+        //    TermsOfService = new Uri(@"https:\\igouist.github.io\\post\\2021\\10\\swagger-enable-authorize"),
+        //    Contact = new OpenApiContact
+        //    {
+        //        Name = "Tian",
+        //        Email = "jacky841224j@gmail.com",
+        //        Url = new Uri(@"https:\\github.com\\jacky841224j\\")
+        //    }
+        //});
 
         // 讓swagger生成註解
         var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";

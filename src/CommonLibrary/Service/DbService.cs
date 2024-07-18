@@ -73,6 +73,7 @@ namespace CommonLibrary.Service
             {
                 _log.LogError(ex.Message);
                 _con.Dispose();
+                throw;
             }
         }
 
@@ -87,10 +88,10 @@ namespace CommonLibrary.Service
 
                 // 建立 Customer 資料表
                 string sql = @"CREATE TABLE IF NOT EXISTS BlackList (
-                                        [ID] INTEGER PRIMARY KEY,
-                                        [Phone] VARCHAR(10),
-                                        [Cancel] TINYINT(1),
-                                        [Block] TINYINT(1)
+                                        ID INT AUTO_INCREMENT PRIMARY KEY,
+                                        Phone VARCHAR(10),
+                                        Cancel TINYINT(1),
+                                        Block TINYINT(1)
                                         )";
                 using (var command = new MySqlCommand(sql, _con))
                 {
@@ -101,6 +102,7 @@ namespace CommonLibrary.Service
             {
                 _log.LogError(ex.Message);
                 _con.Dispose();
+                throw;
             }
         }
 

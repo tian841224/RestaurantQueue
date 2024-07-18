@@ -115,8 +115,11 @@ namespace CommonLibrary.Service
                 if (await redisDb.KeyExistsAsync(key))
                 {
                     var element = (await redisDb.SortedSetRangeByScoreAsync($"{key}", dto.number, dto.number)).FirstOrDefault();
-                    var customer = JsonSerializer.Deserialize<CustomerDto>(element);
-                    return customer;
+                    if (element.HasValue)
+                    {
+                        var customer = JsonSerializer.Deserialize<CustomerDto>(element!);
+                        return customer;
+                    }
                 }
 
                 return new CustomerDto { };
@@ -144,7 +147,7 @@ namespace CommonLibrary.Service
                 //判斷是否有值
                 if (entry.Length > 0)
                 {
-                    var result = JsonSerializer.Deserialize<QueueList>(entry[0]);
+                    var result = JsonSerializer.Deserialize<QueueList>(entry[0]!);
                     // 移除 SortedSet 中的第一個元素
                     await redisDb.SortedSetRemoveAsync(key, entry);
                     return result;
@@ -317,7 +320,7 @@ namespace CommonLibrary.Service
                                           .FirstOrDefault();
                 if (sortedSetEntry.Element.HasValue)
                 {
-                    customer = JsonSerializer.Deserialize<QueueList>(sortedSetEntry.Element);
+                    customer = JsonSerializer.Deserialize<QueueList>(sortedSetEntry.Element!);
                 }
 
                 return customer;

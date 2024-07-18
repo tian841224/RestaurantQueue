@@ -1,0 +1,19 @@
+version: '3.4'
+
+services:
+  FrontStage:
+    image: frontstage
+    build:
+      context: .
+      dockerfile: FrontStage/Dockerfile
+    ports:
+      - "6197:80"
+      - "6358:443"
+    networks:
+      - internal
+    extra_hosts:
+      - mssql:192.168.100.200
+      - redis:192.168.100.200
+networks:
+   internal:
+     driver: bridge
