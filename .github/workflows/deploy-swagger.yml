@@ -1,0 +1,29 @@
+name: Deploy Swagger to GitHub Pages
+
+on:
+  push:
+    branches: [ feature/自動建立Swagger頁面 ]
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+    - name: Install Swashbuckle CLI
+      run: dotnet tool install -g Swashbuckle.AspNetCore.Cli
+    - name: Build
+      run: dotnet build
+    - name: Generate Swagger
+      env:
+        RestaurantQueue_FRONTSTAGE_DLL: .\bin\Debug\net8.0\RestaurantQueue.FrontStage.dll
+      run: .\swaggergen.ps1
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: .
+        keep_files: false

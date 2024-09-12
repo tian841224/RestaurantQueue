@@ -1,0 +1,8 @@
+.vs/
+BackStage/bin/
+BackStage/obj/
+CommonLibrary/bin/
+CommonLibrary/obj/
+FrontStage/bin/
+FrontStage/obj/
+FrontStage/FrontStage.csproj.user
