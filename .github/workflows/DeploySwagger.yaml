@@ -16,10 +16,10 @@ jobs:
     - name: Install Swashbuckle CLI
       run: dotnet tool install -g Swashbuckle.AspNetCore.Cli
     - name: Build
-      run: dotnet build RestaurantQueue.FrontStage/RestaurantQueue.FrontStage.csproj --configuration Release
+      run: dotnet build src/FrontStage/FrontStage.csproj --configuration Release
     - name: Generate Swagger JSON
       run: |
-        swagger tofile --output swagger.json RestaurantQueue.FrontStage/bin/Release/net8.0/RestaurantQueue.FrontStage.dll v1
+        swagger tofile --output swagger.json src/FrontStage/bin/Release/net8.0/FrontStage.dll v1
     - name: Create Swagger UI
       run: |
         cat > index.html << EOL
